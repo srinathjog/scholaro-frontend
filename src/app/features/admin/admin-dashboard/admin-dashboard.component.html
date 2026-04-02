@@ -1,0 +1,329 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCHOLARO — Admin Command Center
+     Premium IT-Enterprise Dashboard for Whitefield Preschool Owners
+     ═══════════════════════════════════════════════════════════════════ -->
+
+<!-- Loading State -->
+<div *ngIf="loading" class="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div class="text-center">
+    <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+    <p class="text-gray-500 font-medium">Loading Command Center...</p>
+  </div>
+</div>
+
+<!-- Error State -->
+<div *ngIf="error && !loading" class="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-lg p-8 text-center max-w-sm">
+    <div class="text-4xl mb-3">⚠️</div>
+    <h2 class="text-lg font-bold text-gray-800 mb-2">Connection Error</h2>
+    <p class="text-gray-500 text-sm">{{ error }}</p>
+  </div>
+</div>
+
+<!-- ─── Dashboard ─── -->
+<div *ngIf="stats && !loading" class="min-h-screen bg-gray-50">
+
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 px-6 py-5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Command Center</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Real-time school overview &middot; {{ stats.attendance.today | date:'mediumDate' }}</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span *ngIf="stats.alerts.not_checked_out > 0"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+          🚨 {{ stats.alerts.not_checked_out }} not checked out
+        </span>
+        <a routerLink="/admin/fees"
+           class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+          💰 Fee Manager
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+    <!-- ═══ KPI Cards Row ═══ -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <!-- 🎒 Total Students -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-11 h-11 bg-indigo-50 rounded-xl flex items-center justify-center">
+            <span class="text-xl">🎒</span>
+          </div>
+          <a routerLink="/admin" fragment="students"
+             class="text-xs text-indigo-600 font-medium hover:underline">Show All →</a>
+        </div>
+        <p class="text-3xl font-bold text-gray-900">{{ stats.overview.total_students }}</p>
+        <p class="text-sm text-gray-500 mt-1">Active Students</p>
+        <div class="mt-3 flex items-center gap-4 text-xs text-gray-400">
+          <span>👩‍🏫 {{ stats.overview.total_teachers }} Teachers</span>
+          <span>🏫 {{ stats.overview.total_classes }} Classes</span>
+        </div>
+      </div>
+
+      <!-- 📉 Today's Attendance -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center">
+            <span class="text-xl">📊</span>
+          </div>
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full"
+                [ngClass]="{
+                  'bg-emerald-50 text-emerald-700': stats.attendance.attendance_percentage >= 80,
+                  'bg-amber-50 text-amber-700': stats.attendance.attendance_percentage >= 50 && stats.attendance.attendance_percentage < 80,
+                  'bg-red-50 text-red-700': stats.attendance.attendance_percentage < 50
+                }">
+            {{ stats.attendance.attendance_percentage }}%
+          </span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900">{{ stats.attendance.present_today }}<span class="text-lg text-gray-400">/{{ stats.attendance.total_enrolled }}</span></p>
+        <p class="text-sm text-gray-500 mt-1">Present Today</p>
+        <!-- Attendance micro-bar -->
+        <div class="mt-3 w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full rounded-full transition-all duration-700"
+               [ngClass]="{
+                 'bg-emerald-500': stats.attendance.attendance_percentage >= 80,
+                 'bg-amber-500': stats.attendance.attendance_percentage >= 50 && stats.attendance.attendance_percentage < 80,
+                 'bg-red-500': stats.attendance.attendance_percentage < 50
+               }"
+               [style.width.%]="stats.attendance.attendance_percentage"></div>
+        </div>
+      </div>
+
+      <!-- 💰 Revenue Collected -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-11 h-11 bg-teal-50 rounded-xl flex items-center justify-center">
+            <span class="text-xl">💰</span>
+          </div>
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full"
+                [ngClass]="{
+                  'bg-emerald-50 text-emerald-700': stats.financials.collection_rate >= 75,
+                  'bg-amber-50 text-amber-700': stats.financials.collection_rate >= 40 && stats.financials.collection_rate < 75,
+                  'bg-red-50 text-red-700': stats.financials.collection_rate < 40
+                }">
+            {{ stats.financials.collection_rate }}% collected
+          </span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900">{{ formatCurrency(stats.financials.total_collected) }}</p>
+        <p class="text-sm text-gray-500 mt-1">of {{ formatCurrency(stats.financials.total_due) }} target &middot; {{ stats.financials.month }}</p>
+        <!-- Collection progress bar -->
+        <div class="mt-3 w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full bg-teal-500 rounded-full transition-all duration-700"
+               [style.width.%]="stats.financials.collection_rate"></div>
+        </div>
+      </div>
+
+      <!-- 📸 Daily Updates -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-11 h-11 bg-violet-50 rounded-xl flex items-center justify-center">
+            <span class="text-xl">📸</span>
+          </div>
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">
+            Last 24h
+          </span>
+        </div>
+        <p class="text-3xl font-bold text-gray-900">{{ stats.engagement.photos_last_24h }}</p>
+        <p class="text-sm text-gray-500 mt-1">Photos Shared by Teachers</p>
+        <div class="mt-3 flex items-center gap-4 text-xs text-gray-400">
+          <span>📝 {{ stats.engagement.activities_last_24h }} Activities</span>
+          <span>👩‍🏫 {{ stats.engagement.active_teachers_last_24h }} Active</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Charts + Alerts Row ═══ -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+      <!-- ── Weekly Attendance Bar Chart ── -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:col-span-1">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-sm font-semibold text-gray-800">Weekly Attendance</h2>
+          <span class="text-xs text-gray-400">Last 7 days</span>
+        </div>
+        <div class="flex items-end justify-between gap-2 h-40">
+          <div *ngFor="let day of chartData" class="flex-1 flex flex-col items-center gap-1">
+            <!-- Bar stack -->
+            <div class="w-full flex flex-col items-center justify-end h-32 relative">
+              <!-- Present bar -->
+              <div class="w-7 rounded-t-md transition-all duration-500"
+                   [ngClass]="{
+                     'bg-indigo-500': barHeight(day.present) >= 60,
+                     'bg-indigo-400': barHeight(day.present) >= 30 && barHeight(day.present) < 60,
+                     'bg-indigo-300': barHeight(day.present) < 30
+                   }"
+                   [style.height.%]="barHeight(day.present)"
+                   [title]="day.present + ' present'">
+              </div>
+              <!-- Absent overlay -->
+              <div *ngIf="day.absent > 0"
+                   class="w-7 bg-red-200 rounded-b-md mt-px"
+                   [style.height.%]="barHeight(day.absent)"
+                   [title]="day.absent + ' absent'">
+              </div>
+            </div>
+            <!-- Day label -->
+            <span class="text-xs text-gray-400 font-medium mt-1">{{ shortDay(day.date) }}</span>
+            <!-- Count -->
+            <span class="text-xs font-semibold text-gray-600">{{ day.present }}</span>
+          </div>
+        </div>
+        <!-- Legend -->
+        <div class="flex items-center gap-4 mt-4 text-xs text-gray-500">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-indigo-500 rounded-sm"></span> Present</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-red-200 rounded-sm"></span> Absent</span>
+        </div>
+      </div>
+
+      <!-- ── Fee Status Donut Chart ── -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:col-span-1">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-sm font-semibold text-gray-800">Fee Status</h2>
+          <a routerLink="/admin/fees" class="text-xs text-indigo-600 font-medium hover:underline">View Details →</a>
+        </div>
+        <!-- CSS Donut -->
+        <div class="flex items-center justify-center">
+          <div class="relative w-40 h-40">
+            <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+              <!-- Background circle -->
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#f3f4f6" stroke-width="4" />
+              <!-- Collected (teal) -->
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#14b8a6" stroke-width="4"
+                      [attr.stroke-dasharray]="feeCollectedPct + ' ' + (100 - feeCollectedPct)"
+                      stroke-dashoffset="0"
+                      stroke-linecap="round"
+                      class="transition-all duration-700" />
+            </svg>
+            <!-- Center label -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-2xl font-bold text-gray-900">{{ feeCollectedPct }}%</span>
+              <span class="text-xs text-gray-400">Collected</span>
+            </div>
+          </div>
+        </div>
+        <!-- Legend -->
+        <div class="flex items-center justify-center gap-6 mt-4 text-xs">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 bg-teal-500 rounded-full"></span>
+            <span class="text-gray-600">Collected {{ formatCurrency(stats.financials.total_collected) }}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 bg-gray-200 rounded-full"></span>
+            <span class="text-gray-600">Pending {{ formatCurrency(stats.financials.total_due - stats.financials.total_collected) }}</span>
+          </div>
+        </div>
+        <div *ngIf="stats.financials.overdue_count > 0"
+             class="mt-3 text-center text-xs text-red-600 font-medium">
+          🚨 {{ stats.financials.overdue_count }} overdue invoices
+        </div>
+      </div>
+
+      <!-- ── Alerts Panel ── -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 lg:col-span-1 flex flex-col">
+        <h2 class="text-sm font-semibold text-gray-800 mb-4">Recent Alerts</h2>
+
+        <div class="flex-1 space-y-4 overflow-y-auto max-h-72">
+
+          <!-- Overdue Fees Section -->
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Overdue Fees</h3>
+            </div>
+            <div *ngIf="stats.financials.overdue_count === 0"
+                 class="text-xs text-gray-400 pl-4">No overdue fees ✅</div>
+            <div *ngIf="stats.financials.overdue_count > 0"
+                 class="bg-red-50 border border-red-100 rounded-xl p-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-semibold text-red-800">{{ stats.financials.overdue_count }} students</p>
+                  <p class="text-xs text-red-600 mt-0.5">have overdue fee payments</p>
+                </div>
+                <a routerLink="/admin/fees"
+                   class="text-xs bg-red-600 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-red-700 transition-colors">
+                  Review
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Not Checked Out Section -->
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-2 h-2 rounded-full"
+                    [ngClass]="stats.alerts.not_checked_out > 0 ? 'bg-amber-500 animate-pulse' : 'bg-gray-300'"></span>
+              <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Pickup Pending</h3>
+            </div>
+            <div *ngIf="stats.alerts.not_checked_out === 0"
+                 class="text-xs text-gray-400 pl-4">All students checked out ✅</div>
+            <div *ngIf="stats.alerts.not_checked_out > 0" class="space-y-1.5">
+              <div *ngFor="let s of stats.alerts.students_not_checked_out"
+                   class="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                <div class="w-8 h-8 bg-amber-200 rounded-full flex items-center justify-center text-xs font-bold text-amber-800">
+                  {{ s.student_name.charAt(0) }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-gray-800 truncate">{{ s.student_name }}</p>
+                  <p class="text-xs text-gray-500">{{ s.class_name }}</p>
+                </div>
+                <span class="text-xs text-amber-600 font-medium whitespace-nowrap">Awaiting pickup</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Engagement Alert -->
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="w-2 h-2 rounded-full"
+                    [ngClass]="stats.engagement.activities_last_24h === 0 ? 'bg-amber-500 animate-pulse' : 'bg-gray-300'"></span>
+              <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Teacher Engagement</h3>
+            </div>
+            <div *ngIf="stats.engagement.activities_last_24h > 0"
+                 class="text-xs text-gray-400 pl-4">
+              {{ stats.engagement.active_teachers_last_24h }} teachers posted {{ stats.engagement.activities_last_24h }} updates ✅
+            </div>
+            <div *ngIf="stats.engagement.activities_last_24h === 0"
+                 class="bg-amber-50 border border-amber-100 rounded-xl p-3">
+              <p class="text-sm font-semibold text-amber-800">No teacher updates today</p>
+              <p class="text-xs text-amber-600 mt-0.5">Teachers haven't posted any activities in the last 24 hours</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Alerts Footer -->
+        <div class="mt-4 pt-3 border-t border-gray-100 text-center">
+          <p class="text-xs text-gray-400">Auto-refreshes with real-time data</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ═══ Quick Actions Footer ═══ -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <h2 class="text-sm font-semibold text-gray-800">Quick Actions</h2>
+        <div class="flex items-center gap-2 flex-wrap">
+          <a routerLink="/admin/fees"
+             class="inline-flex items-center gap-1.5 px-4 py-2 bg-teal-50 text-teal-700 text-sm font-medium rounded-lg hover:bg-teal-100 transition-colors border border-teal-200">
+            📊 Fee Dashboard
+          </a>
+          <a routerLink="/teacher/attendance"
+             class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-200">
+            ✅ Mark Attendance
+          </a>
+          <a routerLink="/teacher/create"
+             class="inline-flex items-center gap-1.5 px-4 py-2 bg-violet-50 text-violet-700 text-sm font-medium rounded-lg hover:bg-violet-100 transition-colors border border-violet-200">
+            📷 Post Activity
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

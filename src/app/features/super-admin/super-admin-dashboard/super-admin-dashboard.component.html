@@ -1,0 +1,206 @@
+<!-- ═══════════════════════════════════════════════════════════════════
+     SCHOLARO — Super Admin Global View
+     Platform-level SaaS Dashboard for the Platform Owner
+     ═══════════════════════════════════════════════════════════════════ -->
+
+<!-- Loading -->
+<div *ngIf="loading" class="min-h-screen bg-slate-900 flex items-center justify-center">
+  <div class="text-center">
+    <div class="w-12 h-12 border-4 border-slate-600 border-t-indigo-400 rounded-full animate-spin mx-auto mb-4"></div>
+    <p class="text-slate-400 font-medium">Loading Global View...</p>
+  </div>
+</div>
+
+<!-- Error -->
+<div *ngIf="error && !loading" class="min-h-screen bg-slate-900 flex items-center justify-center">
+  <div class="bg-slate-800 rounded-2xl p-8 text-center max-w-sm border border-slate-700">
+    <div class="text-4xl mb-3">⚠️</div>
+    <h2 class="text-lg font-bold text-white mb-2">Connection Error</h2>
+    <p class="text-slate-400 text-sm">{{ error }}</p>
+  </div>
+</div>
+
+<!-- ─── Dashboard ─── -->
+<div *ngIf="stats && !loading" class="min-h-screen bg-slate-900">
+
+  <!-- Header -->
+  <div class="bg-slate-800 border-b border-slate-700 px-6 py-5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <span class="text-lg">🛡️</span>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-white">Scholaro Platform</h1>
+            <p class="text-xs text-slate-400">Super Admin &middot; Global View</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-xs text-slate-500 font-mono">{{ stats.total_schools }} tenants managed</span>
+        <button (click)="logout()" title="Logout"
+                class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-red-600/80 text-slate-300 hover:text-white transition-colors border border-slate-600 hover:border-red-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+    <!-- ═══ KPI Cards ═══ -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <!-- Total Schools -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 hover:border-indigo-500/40 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-11 h-11 bg-indigo-500/10 rounded-xl flex items-center justify-center">
+            <span class="text-xl">🏫</span>
+          </div>
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400">All Time</span>
+        </div>
+        <p class="text-3xl font-bold text-white">{{ stats.total_schools }}</p>
+        <p class="text-sm text-slate-400 mt-1">Total Schools</p>
+      </div>
+
+      <!-- Active Schools -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 hover:border-emerald-500/40 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-11 h-11 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+            <span class="text-xl">✅</span>
+          </div>
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Live</span>
+        </div>
+        <p class="text-3xl font-bold text-white">{{ stats.total_schools_active }}</p>
+        <p class="text-sm text-slate-400 mt-1">Active Schools</p>
+      </div>
+
+      <!-- Total Students -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 hover:border-teal-500/40 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-11 h-11 bg-teal-500/10 rounded-xl flex items-center justify-center">
+            <span class="text-xl">👨‍🎓</span>
+          </div>
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400">Platform</span>
+        </div>
+        <p class="text-3xl font-bold text-white">{{ stats.total_students_all }}</p>
+        <p class="text-sm text-slate-400 mt-1">Total Students</p>
+      </div>
+
+      <!-- New Signups -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-5 hover:border-violet-500/40 transition-colors">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-11 h-11 bg-violet-500/10 rounded-xl flex items-center justify-center">
+            <span class="text-xl">🆕</span>
+          </div>
+          <span class="text-xs font-medium px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400">This Month</span>
+        </div>
+        <p class="text-3xl font-bold text-white">{{ stats.new_signups_this_month.length }}</p>
+        <p class="text-sm text-slate-400 mt-1">New Signups</p>
+      </div>
+
+    </div>
+
+    <!-- ═══ New Signups Section ═══ -->
+    <div *ngIf="stats.new_signups_this_month.length > 0"
+         class="bg-slate-800 rounded-2xl border border-slate-700 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-white">New Signups This Month</h2>
+        <span class="text-xs text-slate-500">{{ stats.new_signups_this_month.length }} schools</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div *ngFor="let school of stats.new_signups_this_month"
+             class="bg-slate-700/50 rounded-xl p-4 border border-slate-600 hover:border-indigo-500/40 transition-colors">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center text-sm font-bold text-indigo-300">
+              {{ school.name.charAt(0) }}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-white truncate">{{ school.name }}</p>
+              <p class="text-xs text-slate-400">{{ school.subdomain || '—' }} &middot; {{ daysAgo(school.created_at) }}</p>
+            </div>
+            <span class="text-xs font-medium px-2 py-0.5 rounded-full border"
+                  [ngClass]="statusColor(school.status)">
+              {{ school.status }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ All Schools Table ═══ -->
+    <div class="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-white">All Schools</h2>
+        <span class="text-xs text-slate-500">{{ stats.schools.length }} total</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-slate-400 uppercase tracking-wider">
+              <th class="text-left px-6 py-3 font-semibold">School</th>
+              <th class="text-left px-4 py-3 font-semibold">Status</th>
+              <th class="text-right px-4 py-3 font-semibold">Students</th>
+              <th class="text-right px-4 py-3 font-semibold">Teachers</th>
+              <th class="text-left px-6 py-3 font-semibold">Joined</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let s of stats.schools"
+                class="border-t border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+              <!-- School Name -->
+              <td class="px-6 py-3.5">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold"
+                       [ngClass]="{
+                         'bg-indigo-500/20 text-indigo-300': s.status === 'active',
+                         'bg-blue-500/20 text-blue-300': s.status === 'trial',
+                         'bg-red-500/20 text-red-300': s.status === 'suspended'
+                       }">
+                    {{ s.name.charAt(0) }}
+                  </div>
+                  <div>
+                    <p class="font-medium text-white">{{ s.name }}</p>
+                    <p class="text-xs text-slate-500">{{ s.subdomain || '—' }}</p>
+                  </div>
+                </div>
+              </td>
+              <!-- Status -->
+              <td class="px-4 py-3.5">
+                <span class="text-xs font-medium px-2.5 py-1 rounded-full border"
+                      [ngClass]="statusColor(s.status)">
+                  {{ s.status }}
+                </span>
+              </td>
+              <!-- Students -->
+              <td class="px-4 py-3.5 text-right">
+                <span class="text-white font-semibold">{{ s.student_count }}</span>
+              </td>
+              <!-- Teachers -->
+              <td class="px-4 py-3.5 text-right">
+                <span class="text-slate-300">{{ s.teacher_count }}</span>
+              </td>
+              <!-- Joined -->
+              <td class="px-6 py-3.5">
+                <span class="text-xs text-slate-400">{{ formatDate(s.created_at) }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Empty state -->
+      <div *ngIf="stats.schools.length === 0" class="px-6 py-12 text-center">
+        <p class="text-slate-500 text-sm">No schools registered yet</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="text-center py-4">
+      <p class="text-xs text-slate-600">Scholaro Platform v1.0 &middot; Super Admin Console</p>
+    </div>
+
+  </div>
+</div>

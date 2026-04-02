@@ -1,0 +1,204 @@
+<div class="min-h-screen bg-slate-50">
+
+  <!-- ─── TOP BAR ─── -->
+  <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-lg border-b border-gray-100 shadow-sm">
+    <div class="max-w-2xl mx-auto px-4 py-3">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h1 class="text-lg font-bold text-gray-900 leading-tight">Fast Attendance</h1>
+          <p class="text-xs text-gray-400 mt-0.5">Morning Check-in · {{ todayFormatted }}</p>
+        </div>
+        <!-- Stats pills -->
+        <div *ngIf="selectedClassId && !loading" class="flex gap-1.5 flex-wrap justify-end">
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-700">
+            ✅ {{ presentCount }}
+          </span>
+          <span class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-100 text-red-700">
+            ❌ {{ absentCount }}
+          </span>
+          <span *ngIf="leaveCount" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-700">
+            📋 {{ leaveCount }}
+          </span>
+          <span *ngIf="unmarkedCount > 0" class="px-2.5 py-1 rounded-full text-[11px] font-bold bg-gray-100 text-gray-500">
+            ⏳ {{ unmarkedCount }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Class selector -->
+      <div class="relative">
+        <select [(ngModel)]="selectedClassId" (ngModelChange)="onClassChange()"
+                class="w-full appearance-none bg-slate-100 rounded-xl px-4 py-2.5 pr-10
+                       text-sm font-semibold text-gray-800 border-0 focus:ring-2 focus:ring-emerald-500
+                       cursor-pointer">
+          <option value="" disabled>Select a class…</option>
+          <option *ngFor="let a of assignments" [value]="a.class_id">
+            {{ a.assignedClass?.name || a.class_id }}{{ a.section ? ' — ' + a.section.name : '' }}
+          </option>
+        </select>
+        <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TOASTS ─── -->
+  <div class="max-w-2xl mx-auto px-4 pt-3">
+    <div *ngIf="successMessage"
+         class="rounded-2xl bg-emerald-500 px-5 py-3 shadow-lg shadow-emerald-200/50 mb-2 animate-bounce">
+      <span class="text-white font-semibold text-sm">{{ successMessage }}</span>
+    </div>
+    <div *ngIf="errorMessage"
+         class="rounded-2xl bg-red-500 px-5 py-3 shadow-lg shadow-red-200/50 mb-2">
+      <span class="text-white font-semibold text-sm">{{ errorMessage }}</span>
+    </div>
+  </div>
+
+  <!-- ─── LOADING ─── -->
+  <div *ngIf="loading" class="max-w-2xl mx-auto px-4 py-12 text-center">
+    <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto mb-4"></div>
+    <p class="text-sm text-gray-400">Loading students…</p>
+  </div>
+
+  <!-- ─── MAIN CONTENT ─── -->
+  <div *ngIf="selectedClassId && !loading" class="max-w-2xl mx-auto px-4 pb-40">
+
+    <!-- Mark All Present -->
+    <div class="mt-4 mb-4">
+      <button *ngIf="unmarkedCount > 0"
+              (click)="markAllPresent()"
+              class="w-full py-3.5 rounded-2xl text-white font-bold text-sm
+                     bg-gradient-to-r from-emerald-500 to-green-500
+                     shadow-lg shadow-emerald-200/50
+                     hover:from-emerald-600 hover:to-green-600
+                     active:scale-[0.97] transition-all
+                     flex items-center justify-center gap-2">
+        ✅ Mark All Present ({{ unmarkedCount }} students)
+      </button>
+      <p *ngIf="unmarkedCount > 0" class="text-center text-[11px] text-gray-400 mt-1">
+        One tap — marks all unmarked students as Present
+      </p>
+    </div>
+
+    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+      {{ students.length }} students
+    </p>
+
+    <!-- ─── STUDENT LIST ─── -->
+    <div class="space-y-2.5">
+      <div *ngFor="let s of students"
+           class="bg-white rounded-2xl border-2 p-4 transition-all duration-200"
+           [ngClass]="{
+             'border-emerald-300 bg-emerald-50/50 shadow-sm shadow-emerald-100': getStatus(s.id) === 'present',
+             'border-red-300 bg-red-50/50 shadow-sm shadow-red-100': getStatus(s.id) === 'absent',
+             'border-amber-300 bg-amber-50/50 shadow-sm shadow-amber-100': getStatus(s.id) === 'leave' || getStatus(s.id) === 'late',
+             'border-gray-100': !getStatus(s.id)
+           }">
+
+        <div class="flex items-center gap-3">
+          <!-- Photo / Avatar circle -->
+          <div class="w-14 h-14 rounded-full flex items-center justify-center text-base font-bold shrink-0 shadow-inner"
+               [ngClass]="{
+                 'bg-gradient-to-br from-emerald-400 to-green-500 text-white': getStatus(s.id) === 'present',
+                 'bg-gradient-to-br from-red-400 to-rose-500 text-white': getStatus(s.id) === 'absent',
+                 'bg-gradient-to-br from-amber-400 to-orange-400 text-white': getStatus(s.id) === 'leave' || getStatus(s.id) === 'late',
+                 'bg-gradient-to-br from-gray-200 to-gray-300 text-gray-500': !getStatus(s.id)
+               }">
+            {{ getInitials(s) }}
+          </div>
+
+          <!-- Name + roll -->
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-gray-900 text-sm sm:text-base leading-tight">
+              {{ s.student.first_name }} {{ s.student.last_name }}
+            </p>
+            <p class="text-[11px] text-gray-400 mt-0.5">{{ s.roll_number }}</p>
+            <!-- Current status badge -->
+            <span *ngIf="getStatus(s.id) === 'present'"
+                  class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+              Checked In
+            </span>
+            <span *ngIf="getStatus(s.id) === 'absent'"
+                  class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700">
+              Absent
+            </span>
+            <span *ngIf="getStatus(s.id) === 'late'"
+                  class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
+              Late
+            </span>
+            <span *ngIf="getStatus(s.id) === 'leave'"
+                  class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
+              On Leave
+            </span>
+          </div>
+
+          <!-- Saving spinner -->
+          <div *ngIf="isSaving(s.id)" class="shrink-0 pr-1">
+            <div class="w-7 h-7 border-2 border-gray-200 border-t-emerald-500 rounded-full animate-spin"></div>
+          </div>
+
+          <!-- Two large buttons: Present / Absent -->
+          <div *ngIf="!isSaving(s.id)" class="flex gap-2 shrink-0">
+            <button (click)="markStudent(s.id, 'present')"
+                    class="flex flex-col items-center justify-center rounded-2xl transition-all
+                           active:scale-90 min-w-[3.5rem] sm:min-w-[4.5rem] py-2 px-2 sm:px-3"
+                    [ngClass]="getStatus(s.id) === 'present'
+                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200 scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-emerald-100 hover:text-emerald-700'"
+                    title="Present">
+              <span class="text-xl sm:text-2xl leading-none">✅</span>
+              <span class="text-[10px] sm:text-xs font-bold mt-1">Present</span>
+            </button>
+            <button (click)="markStudent(s.id, 'absent')"
+                    class="flex flex-col items-center justify-center rounded-2xl transition-all
+                           active:scale-90 min-w-[3.5rem] sm:min-w-[4.5rem] py-2 px-2 sm:px-3"
+                    [ngClass]="getStatus(s.id) === 'absent'
+                      ? 'bg-red-500 text-white shadow-lg shadow-red-200 scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'"
+                    title="Absent">
+              <span class="text-xl sm:text-2xl leading-none">❌</span>
+              <span class="text-[10px] sm:text-xs font-bold mt-1">Absent</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── EMPTY STATE ─── -->
+    <div *ngIf="students.length === 0"
+         class="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 text-center mt-4">
+      <div class="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mx-auto mb-5">
+        <span class="text-4xl">📚</span>
+      </div>
+      <h3 class="text-lg font-bold text-gray-900 mb-1">No students enrolled</h3>
+      <p class="text-gray-400 text-sm">This class has no active enrollments yet.</p>
+    </div>
+  </div>
+
+  <!-- ─── STICKY BOTTOM: BROADCAST BUTTON ─── -->
+  <div *ngIf="selectedClassId && !loading && allMarked && presentCount > 0"
+       class="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-100">
+    <div class="max-w-2xl mx-auto px-4 py-3">
+      <button (click)="broadcastArrival()"
+              [disabled]="broadcasting"
+              class="w-full py-3.5 rounded-2xl text-white font-bold text-sm
+                     bg-gradient-to-r from-emerald-500 to-teal-500
+                     shadow-xl shadow-emerald-200/50
+                     hover:from-emerald-600 hover:to-teal-600
+                     active:scale-[0.98] transition-all
+                     disabled:opacity-60 disabled:cursor-not-allowed
+                     flex items-center justify-center gap-2">
+        <span *ngIf="!broadcasting">📣 Broadcast to Parents — {{ presentCount }} Arrived Safely!</span>
+        <span *ngIf="broadcasting" class="flex items-center gap-2">
+          <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+          Sending notifications…
+        </span>
+      </button>
+      <p class="text-center text-[11px] text-gray-400 mt-1.5">
+        Sends "[Child Name] has arrived safely at school! 🏫" to each present student's parents
+      </p>
+    </div>
+  </div>
+</div>

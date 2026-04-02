@@ -1,0 +1,345 @@
+<!-- Parent Timeline — Instagram-style "Child's Day" feed -->
+<div class="min-h-screen bg-gradient-to-b from-orange-50/60 via-white to-rose-50/40">
+
+  <!-- ─── HEADER ─── -->
+  <div class="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-orange-100/60">
+    <div class="max-w-lg mx-auto px-4 pt-3 pb-2.5">
+
+      <!-- Top row: child selector + refresh -->
+      <div class="flex items-center justify-between mb-2">
+        <!-- Multi-child tabs -->
+        <div *ngIf="children.length > 1" class="flex gap-1.5 overflow-x-auto">
+          <button *ngFor="let child of children"
+                  (click)="selectChild(child)"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold
+                         whitespace-nowrap transition-all shrink-0"
+                  [class]="selectedChild?.id === child.id
+                    ? 'bg-orange-500 text-white shadow-md shadow-orange-200'
+                    : 'bg-gray-100 text-gray-500'">
+            {{ child.first_name }}
+          </button>
+        </div>
+        <span *ngIf="children.length <= 1" class="text-[10px] font-semibold text-orange-400 uppercase tracking-widest">
+          Scholaro
+        </span>
+
+        <button *ngIf="selectedChild" (click)="refresh()" [disabled]="refreshing"
+                class="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center
+                       hover:bg-orange-100 transition-colors disabled:opacity-40">
+          <svg class="w-4 h-4 text-orange-500" [class.animate-spin]="refreshing"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Date navigator -->
+      <div *ngIf="selectedChild" class="flex items-center gap-1.5">
+        <button (click)="previousDay()"
+                class="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition">
+          <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+          </svg>
+        </button>
+        <div class="flex-1 relative">
+          <input type="date" [(ngModel)]="selectedDate" (ngModelChange)="onDateChange()"
+                 [max]="selectedDate"
+                 class="w-full opacity-0 absolute inset-0 cursor-pointer z-10" />
+          <div class="text-center py-1 cursor-pointer">
+            <span class="text-sm font-bold text-gray-800">{{ displayDate }}</span>
+            <span *ngIf="displayDate !== selectedDate" class="text-[10px] text-gray-400 ml-1">{{ selectedDate }}</span>
+          </div>
+        </div>
+        <button (click)="nextDay()" [disabled]="isToday"
+                class="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition
+                       disabled:opacity-20">
+          <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── ERROR TOAST ─── -->
+  <div *ngIf="errorMessage" class="max-w-lg mx-auto px-4 pt-3">
+    <div class="rounded-2xl bg-red-400 px-5 py-3 shadow-lg shadow-red-100">
+      <span class="text-white font-semibold text-sm">{{ errorMessage }}</span>
+    </div>
+  </div>
+
+  <!-- ─── LOADING CHILDREN ─── -->
+  <div *ngIf="loadingChildren" class="max-w-lg mx-auto px-4 py-20 text-center">
+    <div class="w-14 h-14 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin mx-auto mb-5"></div>
+    <p class="text-sm text-gray-400 font-medium">Loading your little one's profile…</p>
+  </div>
+
+  <!-- ─── NO CHILDREN ─── -->
+  <div *ngIf="!loadingChildren && children.length === 0"
+       class="max-w-lg mx-auto px-4 py-20 text-center">
+    <div class="w-24 h-24 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-6">
+      <span class="text-5xl">👨‍👩‍👧</span>
+    </div>
+    <h3 class="text-xl font-bold text-gray-900 mb-2">No children linked yet</h3>
+    <p class="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+      Ask your school administrator to link your account to your child's profile.
+    </p>
+  </div>
+
+  <!-- ═══════════════════ MAIN FEED ═══════════════════ -->
+  <div *ngIf="selectedChild" class="max-w-lg mx-auto px-4 pb-24">
+
+    <!-- ─── HERO STATUS CARD ─── -->
+    <div class="mt-4 mb-5 bg-gradient-to-br from-orange-400 via-rose-400 to-pink-400
+                rounded-3xl p-5 text-white shadow-xl shadow-orange-200/50 relative overflow-hidden">
+      <!-- Decorative blobs -->
+      <div class="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full"></div>
+      <div class="absolute -bottom-6 -left-6 w-24 h-24 bg-white/10 rounded-full"></div>
+
+      <!-- Child info -->
+      <div class="relative z-10">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center
+                      text-2xl font-bold">
+            {{ getInitials(selectedChild) }}
+          </div>
+          <div>
+            <h2 class="text-xl font-extrabold leading-tight">
+              {{ selectedChild.first_name }}'s Day
+            </h2>
+            <p class="text-white/80 text-xs font-medium mt-0.5">
+              {{ currentClassName }} · {{ displayDate }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Daily status -->
+        <p *ngIf="!loading && dailyStatus" class="text-base font-semibold leading-snug mt-1">
+          {{ dailyStatus }}
+        </p>
+
+        <!-- Quick stat bubbles -->
+        <div *ngIf="!loading && (logStats.length || isCheckedIn)" class="flex gap-2 mt-3 flex-wrap">
+          <!-- Security badge -->
+          <span *ngIf="isCheckedIn && !isCheckedOut"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/25 backdrop-blur-sm
+                       text-xs font-bold">
+            🛡️ At School
+          </span>
+          <span *ngIf="isCheckedOut"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/25 backdrop-blur-sm
+                       text-xs font-bold">
+            🤝 Picked Up
+          </span>
+          <span *ngFor="let stat of logStats"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-sm
+                       text-xs font-semibold">
+            {{ stat.icon }} {{ stat.count }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── LOADING SKELETON ─── -->
+    <div *ngIf="loading" class="space-y-4">
+      <!-- Skeleton hero -->
+      <div class="animate-pulse rounded-2xl bg-gray-100 h-32"></div>
+      <div *ngFor="let i of [1,2,3]" class="animate-pulse">
+        <div class="bg-white rounded-2xl p-4 space-y-3">
+          <div class="flex gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gray-100"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-3 bg-gray-100 rounded w-20"></div>
+              <div class="h-4 bg-gray-100 rounded w-40"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TIMELINE FEED ─── -->
+    <div *ngIf="!loading" class="space-y-3">
+
+      <div *ngFor="let item of timeline; let i = index">
+
+        <!-- ═══ ACTIVITY / BROADCAST CARD — Instagram-style ═══ -->
+        <div *ngIf="item.type === 'activity'"
+             class="bg-white rounded-3xl shadow-sm border border-gray-100/80 overflow-hidden">
+
+          <!-- Header row -->
+          <div class="flex items-center gap-3 px-4 py-3">
+            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500
+                        flex items-center justify-center shadow-md shadow-violet-100">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <circle cx="12" cy="13" r="3"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-bold text-gray-900">{{ item.className || 'Class Update' }}</p>
+              <p class="text-[11px] text-gray-400">{{ item.activity_type || 'Activity' }}</p>
+            </div>
+            <span class="text-[11px] text-gray-400 font-medium">
+              {{ item.created_at | date:'shortTime' }}
+            </span>
+          </div>
+
+          <!-- Photo gallery — 2×2 grid or full-width hero -->
+          <div *ngIf="item.media && item.media.length">
+            <!-- Single image -->
+            <img *ngIf="item.media.length === 1"
+                 [src]="item.media[0].media_url"
+                 [alt]="item.title || 'Photo'"
+                 class="w-full aspect-[4/3] object-cover"
+                 loading="lazy" />
+            <!-- 2×2 grid -->
+            <div *ngIf="item.media.length > 1" class="grid grid-cols-2 gap-0.5">
+              <img *ngFor="let m of item.media; let j = index"
+                   [src]="m.media_url"
+                   [alt]="item.title || 'Photo'"
+                   class="w-full aspect-square object-cover"
+                   loading="lazy" />
+            </div>
+          </div>
+
+          <!-- Caption -->
+          <div class="px-4 py-3">
+            <h3 class="font-bold text-gray-900 text-[15px] leading-snug">{{ item.title }}</h3>
+            <p *ngIf="item.description"
+               class="text-gray-500 text-sm mt-1 leading-relaxed">
+              {{ item.description }}
+            </p>
+          </div>
+        </div>
+
+        <!-- ═══ DAILY LOG CARD — Warm, sentence-based ═══ -->
+        <div *ngIf="item.type === 'daily_log'"
+             class="rounded-2xl overflow-hidden border transition-all"
+             [ngClass]="{
+               'bg-amber-50/70 border-amber-100': item.category === 'meal',
+               'bg-indigo-50/70 border-indigo-100': item.category === 'nap',
+               'bg-cyan-50/70 border-cyan-100': item.category === 'potty',
+               'bg-pink-50/70 border-pink-100': item.category === 'mood',
+               'bg-emerald-50/70 border-emerald-100': item.category === 'health'
+             }">
+          <div class="flex items-start gap-3.5 px-4 py-3.5">
+            <!-- Big category icon -->
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-sm"
+                 [ngClass]="{
+                   'bg-amber-100/80': item.category === 'meal',
+                   'bg-indigo-100/80': item.category === 'nap',
+                   'bg-cyan-100/80': item.category === 'potty',
+                   'bg-pink-100/80': item.category === 'mood',
+                   'bg-emerald-100/80': item.category === 'health'
+                 }">
+              {{ categoryConfig[item.category!]?.icon || '📝' }}
+            </div>
+
+            <!-- Sentence -->
+            <div class="flex-1 min-w-0 pt-0.5">
+              <p class="text-[15px] font-semibold text-gray-800 leading-snug">
+                {{ getLogSentence(item) }}
+              </p>
+              <p *ngIf="item.notes" class="text-xs text-gray-500 mt-1 italic">
+                "{{ item.notes }}"
+              </p>
+              <p class="text-[11px] font-medium mt-1.5"
+                 [ngClass]="{
+                   'text-amber-500': item.category === 'meal',
+                   'text-indigo-500': item.category === 'nap',
+                   'text-cyan-500': item.category === 'potty',
+                   'text-pink-500': item.category === 'mood',
+                   'text-emerald-500': item.category === 'health'
+                 }">
+                {{ categoryConfig[item.category!]?.label }}
+                · {{ item.created_at | date:'shortTime' }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ SECURITY CARD — Check-in / Check-out ═══ -->
+        <div *ngIf="item.type === 'security'"
+             class="rounded-2xl overflow-hidden border transition-all"
+             [ngClass]="{
+               'bg-teal-50/70 border-teal-200': item.security_event === 'check_in',
+               'bg-emerald-50/70 border-emerald-200': item.security_event === 'check_out'
+             }">
+
+          <!-- Top accent bar -->
+          <div class="h-1"
+               [ngClass]="{
+                 'bg-gradient-to-r from-teal-400 to-cyan-400': item.security_event === 'check_in',
+                 'bg-gradient-to-r from-emerald-400 to-green-400': item.security_event === 'check_out'
+               }"></div>
+
+          <div class="flex items-start gap-3.5 px-4 py-3.5">
+            <!-- Shield / handwave icon -->
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 shadow-sm"
+                 [ngClass]="{
+                   'bg-teal-100/80': item.security_event === 'check_in',
+                   'bg-emerald-100/80': item.security_event === 'check_out'
+                 }">
+              <span *ngIf="item.security_event === 'check_in'">🛡️</span>
+              <span *ngIf="item.security_event === 'check_out'">🤝</span>
+            </div>
+
+            <!-- Message -->
+            <div class="flex-1 min-w-0 pt-0.5">
+              <p class="text-[10px] font-bold uppercase tracking-wider mb-1"
+                 [ngClass]="{
+                   'text-teal-600': item.security_event === 'check_in',
+                   'text-emerald-600': item.security_event === 'check_out'
+                 }">
+                <span *ngIf="item.security_event === 'check_in'">Secure Check-In</span>
+                <span *ngIf="item.security_event === 'check_out'">Secure Pickup</span>
+              </p>
+              <p class="text-[15px] font-semibold text-gray-800 leading-snug">
+                {{ getSecuritySentence(item) }}
+              </p>
+              <p class="text-[11px] font-medium mt-1.5"
+                 [ngClass]="{
+                   'text-teal-500': item.security_event === 'check_in',
+                   'text-emerald-500': item.security_event === 'check_out'
+                 }">
+                <span *ngIf="item.security_event === 'check_in'">
+                  Arrival · {{ item.check_in_time | date:'shortTime' }}
+                  <span *ngIf="item.status === 'late'" class="ml-1 text-amber-500 font-bold">⏰ Late</span>
+                </span>
+                <span *ngIf="item.security_event === 'check_out'">
+                  Pickup · {{ item.check_out_time | date:'shortTime' }}
+                  <span *ngIf="item.pickup_by_name" class="ml-1">· {{ item.pickup_by_name }}</span>
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─── EMPTY STATE ─── -->
+    <div *ngIf="!loading && timeline.length === 0"
+         class="bg-white rounded-3xl border border-orange-100/60 shadow-sm p-10 text-center mt-2">
+      <div class="w-24 h-24 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-5">
+        <span class="text-5xl">🌻</span>
+      </div>
+      <h3 class="text-lg font-bold text-gray-900 mb-2">
+        {{ isToday ? 'No updates yet' : 'A quiet day' }}
+      </h3>
+      <p class="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">
+        {{ isToday
+           ? 'The teachers are busy with the kids. Check back soon for updates!'
+           : 'No updates were recorded on this day.' }}
+      </p>
+      <button *ngIf="!isToday" (click)="jumpToToday()"
+              class="mt-5 px-6 py-2.5 rounded-full bg-orange-500 text-white text-sm font-bold
+                     hover:bg-orange-600 transition-colors shadow-lg shadow-orange-200/50
+                     active:scale-95">
+        ← Back to Today
+      </button>
+    </div>
+  </div>
+</div>

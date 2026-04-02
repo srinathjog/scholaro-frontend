@@ -1,0 +1,15 @@
+
+
+.activity-feed-container {}
+.activity-card {}
+.activity-header {}
+.activity-title {}
+.activity-description {}
+.activity-media-grid {}
+.activity-media-img {}
+.activity-actions {}
+
+@media (max-width: 640px) {
+  .activity-feed-container {}
+  .activity-media-img {}
+}

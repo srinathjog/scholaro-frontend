@@ -1,0 +1,80 @@
+import { Component } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
+
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-login',
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.scss'],
+  standalone: true,
+  imports: [CommonModule, ReactiveFormsModule]
+})
+export class LoginComponent {
+  loginForm: FormGroup;
+  errorMessage: string | null = null;
+  loading = false;
+  isSuperAdmin = false;
+
+  constructor(
+    private fb: FormBuilder,
+    public authService: AuthService,
+    private router: Router
+  ) {
+    this.loginForm = this.fb.group({
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      schoolCode: ['', Validators.required]
+    });
+  }
+
+  get email() { return this.loginForm.get('email'); }
+  get password() { return this.loginForm.get('password'); }
+  get schoolCode() { return this.loginForm.get('schoolCode'); }
+
+  toggleSuperAdmin() {
+    this.isSuperAdmin = !this.isSuperAdmin;
+    if (this.isSuperAdmin) {
+      this.loginForm.get('schoolCode')?.clearValidators();
+      this.loginForm.get('schoolCode')?.setValue('');
+    } else {
+      this.loginForm.get('schoolCode')?.setValidators(Validators.required);
+    }
+    this.loginForm.get('schoolCode')?.updateValueAndValidity();
+  }
+
+  onSubmit() {
+    this.errorMessage = null;
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      return;
+    }
+    this.loading = true;
+    const { email, password, schoolCode } = this.loginForm.value;
+    const tenantId = this.isSuperAdmin ? '' : schoolCode;
+    this.authService.login(email, password, tenantId).subscribe({
+      next: (user: any) => {
+        this.loading = false;
+        const roles = this.authService.getRoles();
+        if (roles.includes('SUPER_ADMIN')) {
+          this.router.navigate(['/super-admin']);
+        } else if (roles.includes('TEACHER')) {
+          this.router.navigate(['/teacher/history']);
+        } else if (roles.includes('PARENT')) {
+          this.router.navigate(['/parent']);
+        } else if (roles.includes('SCHOOL_ADMIN')) {
+          this.router.navigate(['/admin']);
+        } else {
+          this.router.navigate(['/']);
+        }
+      },
+      error: () => {
+        this.loading = false;
+        this.errorMessage = 'Invalid Credentials';
+      }
+    });
+  }
+}

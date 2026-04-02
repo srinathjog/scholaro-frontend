@@ -1,0 +1,20 @@
+<div class="activity-feed-container" *ngIf="!loading; else loadingTpl">
+  <div *ngFor="let activity of activities" class="activity-card">
+    <div class="activity-header">
+      <span class="teacher-name">{{ activity.teacher_name }}</span>
+      <span class="timestamp">{{ activity.created_at | date:'short' }}</span>
+    </div>
+    <div class="activity-title">{{ activity.title }}</div>
+    <div class="activity-description">{{ activity.description }}</div>
+    <div class="activity-media-grid">
+      <img *ngFor="let url of activity.media_urls" [src]="url" class="activity-media-img" alt="Activity media" />
+    </div>
+    <div class="activity-actions">
+      <button mat-button color="primary">Like</button>
+      <button mat-button color="accent">Comment</button>
+    </div>
+  </div>
+</div>
+<ng-template #loadingTpl>
+  <div class="loading">Loading feed...</div>
+</ng-template>

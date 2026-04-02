@@ -1,0 +1,296 @@
+<!-- HIGH-CONTRAST DESIGN: Bold colors readable in afternoon sun -->
+
+<!-- ═══ HEADER ═══ -->
+<div class="sticky top-0 z-30 bg-gray-900 text-white px-4 py-3 shadow-xl">
+  <div class="max-w-2xl mx-auto">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-lg font-extrabold tracking-tight">🛡️ Secure Pickup</h1>
+        <p class="text-xs text-gray-400">{{ todayFormatted }} · Afternoon Handover</p>
+      </div>
+      <div class="flex gap-2 text-xs font-bold">
+        <span class="bg-amber-500 text-black rounded-full px-3 py-1 shadow">⏳ {{ checkedInStudents.length }}</span>
+        <span class="bg-emerald-500 text-black rounded-full px-3 py-1 shadow">✅ {{ checkedOutStudents.length }}</span>
+      </div>
+    </div>
+
+    <!-- Class selector -->
+    <select
+      [(ngModel)]="selectedClassId"
+      (ngModelChange)="onClassChange()"
+      class="mt-2 w-full rounded-xl bg-gray-800 text-white px-4 py-2.5 text-sm font-semibold
+             border border-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+    >
+      <option value="" disabled class="text-gray-400">Select class...</option>
+      <option *ngFor="let a of assignments" [value]="a.class_id" class="text-gray-900">
+        {{ a.assignedClass?.name || a.class_id }}
+      </option>
+    </select>
+  </div>
+</div>
+
+<!-- ═══ SUCCESS TOAST ═══ -->
+<div
+  *ngIf="successMessage"
+  class="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-500 text-white px-6 py-3
+         rounded-2xl shadow-2xl text-sm font-bold animate-bounce"
+>
+  {{ successMessage }}
+</div>
+
+<!-- ═══ ERROR ═══ -->
+<div *ngIf="errorMessage"
+     class="max-w-2xl mx-auto px-4 mt-3">
+  <div class="bg-red-600 text-white px-4 py-3 rounded-xl text-sm font-semibold shadow-lg">
+    {{ errorMessage }}
+  </div>
+</div>
+
+<!-- ═══ LOADING ═══ -->
+<div *ngIf="loading" class="flex justify-center items-center py-20">
+  <div class="h-12 w-12 border-4 border-gray-300 border-t-amber-500 rounded-full animate-spin"></div>
+</div>
+
+<!-- ═══ EMPTY STATE ═══ -->
+<div *ngIf="!loading && selectedClassId && checkedInStudents.length === 0 && checkedOutStudents.length === 0"
+     class="text-center py-20 px-6">
+  <p class="text-5xl mb-3">🏫</p>
+  <p class="text-base font-bold text-gray-700">No attendance records for today</p>
+  <p class="text-sm text-gray-400 mt-1">Mark morning attendance first, then come here for pickup.</p>
+</div>
+
+<!-- ═══ MAIN CONTENT ═══ -->
+<div *ngIf="!loading && selectedClassId && (checkedInStudents.length > 0 || checkedOutStudents.length > 0)"
+     class="max-w-2xl mx-auto pb-6">
+
+  <!-- ═══ WAITING GRID ═══ -->
+  <div *ngIf="checkedInStudents.length > 0" class="px-4 mt-4">
+    <h2 class="text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-3">
+      ⏳ Still in School — Tap to Release
+    </h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <button
+        *ngFor="let s of checkedInStudents"
+        (click)="openModal(s)"
+        class="bg-white rounded-2xl shadow-lg p-4 flex flex-col items-center gap-2
+               active:scale-95 transition-transform
+               border-3 border-amber-400 hover:border-amber-500
+               focus:outline-none focus:ring-4 focus:ring-amber-300"
+      >
+        <div class="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-500
+                    flex items-center justify-center text-white text-xl font-black shadow-lg">
+          {{ getInitials(s) }}
+        </div>
+        <p class="text-sm font-bold text-gray-900 text-center leading-tight">
+          {{ s.student.first_name }} {{ s.student.last_name }}
+        </p>
+        <span class="text-[10px] font-semibold text-gray-500">{{ s.roll_number }}</span>
+        <span class="text-[11px] bg-amber-500 text-black px-3 py-0.5 rounded-full font-bold shadow-sm">
+          TAP TO RELEASE
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ ALL GONE BANNER ═══ -->
+  <div *ngIf="checkedInStudents.length === 0 && checkedOutStudents.length > 0"
+       class="mx-4 mt-6 bg-emerald-600 text-white rounded-2xl p-5 text-center shadow-xl">
+    <p class="text-3xl mb-2">🎉</p>
+    <p class="text-base font-bold">All students picked up!</p>
+    <p class="text-sm text-emerald-100 mt-1">{{ checkedOutStudents.length }} secure handovers completed today.</p>
+  </div>
+
+  <!-- ═══ CHECKED OUT LIST ═══ -->
+  <div *ngIf="checkedOutStudents.length > 0" class="px-4 mt-6">
+    <h2 class="text-xs font-extrabold text-gray-900 uppercase tracking-widest mb-3">
+      ✅ Picked Up ({{ checkedOutStudents.length }})
+    </h2>
+    <div class="space-y-2">
+      <div
+        *ngFor="let s of checkedOutStudents"
+        class="flex items-center gap-3 bg-emerald-50 rounded-xl px-4 py-3 border-2 border-emerald-200"
+      >
+        <div class="w-11 h-11 rounded-full bg-emerald-500 flex items-center justify-center text-white text-sm font-bold shadow">
+          {{ getInitials(s) }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-gray-900">
+            {{ s.student.first_name }} {{ s.student.last_name }}
+          </p>
+          <p class="text-[11px] text-emerald-700 font-semibold truncate">
+            by {{ getRecord(s.id)?.pickup_by_name || '—' }}
+            · {{ getRecord(s.id)?.check_out_time | date:'shortTime' }}
+          </p>
+          <p *ngIf="getRecord(s.id)?.pickup_notes"
+             class="text-[10px] text-gray-500 truncate mt-0.5 italic">
+            {{ getRecord(s.id)?.pickup_notes }}
+          </p>
+        </div>
+        <span class="text-emerald-600 text-xl font-black">✔</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL — Secure Handover Sheet
+     ══════════════════════════════════════════════════════ -->
+<div
+  *ngIf="modalOpen"
+  class="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+>
+  <!-- Backdrop -->
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" (click)="closeModal()"></div>
+
+  <!-- Sheet -->
+  <div class="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[92vh] overflow-y-auto shadow-2xl">
+
+    <!-- Handle bar -->
+    <div class="flex justify-center pt-3 pb-1">
+      <div class="w-12 h-1.5 rounded-full bg-gray-300"></div>
+    </div>
+
+    <!-- Student info (dark header) -->
+    <div class="bg-gray-900 text-white px-6 py-5 mx-4 rounded-2xl text-center" *ngIf="modalStudent">
+      <div class="w-18 h-18 mx-auto w-[72px] h-[72px] rounded-full bg-gradient-to-br from-amber-400 to-orange-500
+                  flex items-center justify-center text-white text-2xl font-black shadow-xl">
+        {{ getInitials(modalStudent) }}
+      </div>
+      <h3 class="mt-3 text-xl font-extrabold">
+        {{ modalStudent.student.first_name }} {{ modalStudent.student.last_name }}
+      </h3>
+      <p class="text-xs text-gray-400 mt-1">{{ modalStudent.roll_number }} · {{ getClassName() }}</p>
+    </div>
+
+    <!-- Who's picking up? -->
+    <div class="px-6 py-5">
+      <p class="text-sm font-extrabold text-gray-900 uppercase tracking-wider mb-3">
+        Who is picking up?
+      </p>
+      <div class="grid grid-cols-3 gap-2.5">
+        <button
+          *ngFor="let p of pickupPersons"
+          (click)="selectPickupPerson(p.key)"
+          [class]="pickupPerson === p.key
+            ? 'bg-gray-900 text-white border-gray-900 shadow-lg scale-105'
+            : 'bg-white text-gray-800 border-gray-200 hover:border-gray-400'"
+          class="flex flex-col items-center gap-1 rounded-xl border-2 px-2 py-3.5 text-sm font-semibold
+                 transition-all active:scale-95"
+        >
+          <span class="text-2xl">{{ p.icon }}</span>
+          <span class="text-[11px] leading-tight text-center">{{ p.key }}</span>
+        </button>
+      </div>
+
+      <!-- Custom name -->
+      <div *ngIf="pickupPerson === 'Other'" class="mt-3">
+        <input
+          [(ngModel)]="customPickupName"
+          type="text"
+          placeholder="Enter pickup person's name..."
+          class="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-sm font-semibold
+                 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+          autofocus
+        />
+      </div>
+    </div>
+
+    <hr class="border-gray-200 mx-6"/>
+
+    <!-- Camera / Photo capture -->
+    <div class="px-6 py-5">
+      <p class="text-sm font-extrabold text-gray-900 uppercase tracking-wider mb-3">
+        📸 Snap Pickup Person Photo
+      </p>
+
+      <!-- No photo yet, camera not active -->
+      <div *ngIf="!pickupPhoto && !cameraActive">
+        <button
+          (click)="startCamera()"
+          class="w-full flex items-center justify-center gap-2 bg-gray-900 text-white
+                 rounded-xl py-3.5 text-sm font-bold transition-colors active:scale-95
+                 hover:bg-gray-800 shadow-lg"
+        >
+          <span class="text-xl">📷</span> Open Camera
+        </button>
+        <p class="text-[11px] text-gray-400 text-center mt-1.5">
+          Recommended for security verification
+        </p>
+      </div>
+
+      <!-- Camera error -->
+      <p *ngIf="cameraError" class="text-xs text-red-600 font-semibold mt-2">
+        Camera access denied. You can skip the photo.
+      </p>
+
+      <!-- Camera feed -->
+      <div *ngIf="cameraActive" class="mt-1">
+        <video #videoEl autoplay playsinline muted
+               class="w-full rounded-xl bg-black aspect-[4/3] object-cover shadow-lg border-2 border-gray-200">
+        </video>
+        <button
+          (click)="capturePhoto()"
+          class="mt-3 w-full bg-amber-500 hover:bg-amber-600 text-black rounded-xl py-3.5
+                 text-sm font-black transition-colors active:scale-95 shadow-lg"
+        >
+          📸 CAPTURE PHOTO
+        </button>
+      </div>
+      <canvas #canvasEl class="hidden"></canvas>
+
+      <!-- Photo preview -->
+      <div *ngIf="pickupPhoto" class="mt-2 relative">
+        <img [src]="pickupPhoto" class="w-full rounded-xl shadow-lg border-2 border-emerald-300" alt="Pickup person photo"/>
+        <button
+          (click)="retakePhoto()"
+          class="absolute top-2 right-2 bg-black/70 text-white rounded-full w-9 h-9
+                 flex items-center justify-center text-base font-bold hover:bg-black/90 shadow"
+        >
+          ↻
+        </button>
+        <span class="absolute bottom-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
+          ✓ Photo Captured
+        </span>
+      </div>
+    </div>
+
+    <hr class="border-gray-200 mx-6"/>
+
+    <!-- Pickup Notes -->
+    <div class="px-6 py-5">
+      <p class="text-sm font-extrabold text-gray-900 uppercase tracking-wider mb-3">
+        📝 Pickup Notes
+      </p>
+      <textarea
+        [(ngModel)]="pickupNotes"
+        rows="2"
+        placeholder="Any handover notes (e.g. child has a backpack, medicine in bag...)"
+        class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm
+               focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900
+               resize-none placeholder:text-gray-400"
+      ></textarea>
+    </div>
+
+    <!-- Confirm button -->
+    <div class="sticky bottom-0 px-6 py-4 bg-white border-t-2 border-gray-100">
+      <button
+        (click)="confirmHandover()"
+        [disabled]="!canConfirm"
+        [class]="canConfirm
+          ? 'bg-emerald-600 text-white shadow-2xl shadow-emerald-300 hover:bg-emerald-700'
+          : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+        class="w-full rounded-2xl py-4 text-base font-black tracking-wide transition-all
+               active:scale-95 flex items-center justify-center gap-2"
+      >
+        <span *ngIf="confirming"
+              class="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+        <span *ngIf="!confirming">🛡️ CONFIRM SECURE HANDOVER</span>
+        <span *ngIf="confirming">Processing...</span>
+      </button>
+      <p *ngIf="canConfirm" class="text-center text-[10px] text-gray-400 mt-1.5">
+        Logs exact time · Notifies parent automatically
+      </p>
+    </div>
+
+  </div>
+</div>

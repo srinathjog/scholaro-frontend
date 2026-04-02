@@ -1,0 +1,23 @@
+.login-form {
+  max-width: 400px;
+  margin: 3rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.login-form h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.login-form .error-message {
+  color: #e53e3e;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.login-form input.ng-invalid.ng-touched {
+  border-color: #e53e3e;
+}
