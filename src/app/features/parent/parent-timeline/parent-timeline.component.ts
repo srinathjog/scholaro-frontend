@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import {
   ParentService,
   ParentChild,
@@ -12,7 +13,7 @@ import { PushNotificationService } from '../../../core/services/push-notificatio
 @Component({
   selector: 'app-parent-timeline',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './parent-timeline.component.html',
 })
 export class ParentTimelineComponent implements OnInit {
@@ -33,6 +34,7 @@ export class ParentTimelineComponent implements OnInit {
   loadingChildren = true;
   refreshing = false;
   errorMessage = '';
+  showFirstLoginBanner = false;
 
   // Category display config
   categoryConfig: Record<string, { icon: string; label: string; color: string; bg: string; sentence: Record<string, string> }> = {
@@ -66,9 +68,23 @@ export class ParentTimelineComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Check if parent is on first login (temporary password)
+    const user = this.authService.currentUser$;
+    user.subscribe(u => {
+      if (u?.isFirstLogin) {
+        this.showFirstLoginBanner = true;
+        this.cdr.detectChanges();
+      }
+    });
+
     this.loadChildren();
     // Register for push notifications (fire-and-forget)
     this.pushService.subscribe().catch(() => {});
+  }
+
+  dismissBanner(): void {
+    this.showFirstLoginBanner = false;
+    this.cdr.detectChanges();
   }
 
   /** Step 1: Load parent's children with enrollments */

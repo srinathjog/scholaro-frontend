@@ -15,6 +15,16 @@ export const routes: Routes = [
 		title: 'Login',
 	},
 	{
+		path: 'forgot-password',
+		loadComponent: () => import('./features/auth/forgot-password/forgot-password.component').then(m => m.ForgotPasswordComponent),
+		title: 'Forgot Password',
+	},
+	{
+		path: 'reset-password',
+		loadComponent: () => import('./features/auth/reset-password/reset-password.component').then(m => m.ResetPasswordComponent),
+		title: 'Reset Password',
+	},
+	{
 		path: 'feed',
 		loadComponent: () => import('./activity-feed').then(m => m.ActivityFeedComponent),
 		title: 'Activity Feed',
@@ -22,6 +32,7 @@ export const routes: Routes = [
 	{
 		path: 'admin',
 		canActivate: [RoleGuard(['SCHOOL_ADMIN'])],
+		loadComponent: () => import('./features/admin/admin-shell.component').then(m => m.AdminShellComponent),
 		children: [
 			{
 				path: '',
@@ -29,9 +40,49 @@ export const routes: Routes = [
 				title: 'Admin Dashboard',
 			},
 			{
+				path: 'students',
+				loadComponent: () => import('./features/admin/students/students.component').then(m => m.StudentsComponent),
+				title: 'Students',
+			},
+			{
+				path: 'students/:id',
+				loadComponent: () => import('./features/admin/students/student-detail.component').then(m => m.StudentDetailComponent),
+				title: 'Student Detail',
+			},
+			{
+				path: 'staff',
+				loadComponent: () => import('./features/admin/staff/staff.component').then(m => m.StaffComponent),
+				title: 'Staff',
+			},
+			{
+				path: 'parents',
+				loadComponent: () => import('./features/admin/parents/parent-list/parent-list').then(m => m.ParentList),
+				title: 'Manage Parents',
+			},
+			{
+				path: 'bulk-upload',
+				loadComponent: () => import('./features/admin/bulk-upload/bulk-upload.component').then(m => m.BulkUploadComponent),
+				title: 'Bulk Upload',
+			},
+			{
 				path: 'fees',
 				loadComponent: () => import('./features/admin/fees/fees.component').then(m => m.FeesComponent),
 				title: 'Fee Management',
+			},
+			{
+				path: 'settings',
+				loadComponent: () => import('./features/admin/settings/branding.component').then(m => m.BrandingComponent),
+				title: 'Branding & Settings',
+			},
+			{
+				path: 'classes',
+				loadComponent: () => import('./features/admin/academic/class-list.component').then(m => m.ClassListComponent),
+				title: 'School Structure',
+			},
+			{
+				path: 'teacher-assignments',
+				loadComponent: () => import('./features/admin/academic/teacher-assignment.component').then(m => m.TeacherAssignmentComponent),
+				title: 'Staff Assignment',
 			},
 		],
 	},
@@ -40,6 +91,12 @@ export const routes: Routes = [
 		canActivate: [RoleGuard(['SUPER_ADMIN'])],
 		loadComponent: () => import('./features/super-admin/super-admin-dashboard/super-admin-dashboard.component').then(m => m.SuperAdminDashboardComponent),
 		title: 'Platform Dashboard',
+	},
+	{
+		path: 'super-admin/onboard',
+		canActivate: [RoleGuard(['SUPER_ADMIN'])],
+		loadComponent: () => import('./features/super-admin/school-onboarding/school-onboarding.component').then(m => m.SchoolOnboardingComponent),
+		title: 'New School Onboarding',
 	},
 	{
 		path: 'teacher',
@@ -81,6 +138,7 @@ export const routes: Routes = [
 	{
 		path: 'parent',
 		canActivate: [RoleGuard(['PARENT'])],
+		loadComponent: () => import('./features/parent/parent-shell.component').then(m => m.ParentShellComponent),
 		children: [
 			{
 				path: '',
@@ -96,6 +154,11 @@ export const routes: Routes = [
 				path: 'fees',
 				loadComponent: () => import('./features/parent/fees/parent-fees.component').then(m => m.ParentFeesComponent),
 				title: 'Fees & Payments',
+			},
+			{
+				path: 'change-password',
+				loadComponent: () => import('./features/parent/change-password/change-password.component').then(m => m.ChangePasswordComponent),
+				title: 'Change Password',
 			},
 		],
 	},

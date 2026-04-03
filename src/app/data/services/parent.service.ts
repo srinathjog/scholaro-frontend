@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, map } from 'rxjs';
+import { Observable, forkJoin, map, of, catchError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Activity } from './activity.service';
 import { DailyLog, LogCategory } from './daily-log.service';
@@ -84,12 +84,12 @@ export class ParentService {
       ),
     };
 
-    // Add attendance fetch if studentId is available
+    // Add attendance fetch if studentId is available (catch errors so timeline still loads)
     if (studentId) {
       sources.attendance = this.http.get<AttendanceRecord[]>(
         `${this.apiUrl}/parents/student/${studentId}/attendance`,
         { params: { date: d } },
-      );
+      ).pipe(catchError(() => of([] as AttendanceRecord[])));
     }
 
     return forkJoin(sources).pipe(

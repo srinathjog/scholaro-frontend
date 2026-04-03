@@ -27,6 +27,21 @@ export interface PlatformStats {
   schools: TenantInfo[];
 }
 
+export interface OnboardSchoolPayload {
+  schoolName: string;
+  subdomain: string;
+  adminEmail: string;
+  adminName: string;
+}
+
+export interface OnboardResult {
+  tenant_id: string;
+  school_name: string;
+  subdomain: string;
+  admin_email: string;
+  temporary_password: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SuperAdminService {
   private readonly api = `${environment.apiUrl}/super-admin`;
@@ -35,5 +50,13 @@ export class SuperAdminService {
 
   getStats(): Observable<PlatformStats> {
     return this.http.get<PlatformStats>(`${this.api}/stats`);
+  }
+
+  onboardSchool(payload: OnboardSchoolPayload): Observable<OnboardResult> {
+    return this.http.post<OnboardResult>(`${this.api}/onboard`, payload);
+  }
+
+  updateTenantStatus(tenantId: string, status: string): Observable<any> {
+    return this.http.patch(`${this.api}/tenants/${tenantId}/status`, { status });
   }
 }

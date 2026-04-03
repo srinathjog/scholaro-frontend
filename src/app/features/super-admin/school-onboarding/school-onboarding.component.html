@@ -1,0 +1,288 @@
+<div class="min-h-screen bg-slate-900">
+
+  <!-- Header -->
+  <div class="bg-slate-800 border-b border-slate-700 px-6 py-5">
+    <div class="max-w-3xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <button (click)="goToDashboard()"
+                class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition-colors border border-slate-600">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div>
+          <h1 class="text-lg font-bold text-white">New School Onboarding</h1>
+          <p class="text-xs text-slate-400">Launch a new Whitefield preschool in under a minute</p>
+        </div>
+      </div>
+      <!-- Step indicator -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+               [ngClass]="step >= 1 ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-500'">1</div>
+          <div class="w-6 h-0.5" [ngClass]="step >= 2 ? 'bg-indigo-600' : 'bg-slate-700'"></div>
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+               [ngClass]="step >= 2 ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-500'">2</div>
+          <div class="w-6 h-0.5" [ngClass]="step >= 3 ? 'bg-emerald-500' : 'bg-slate-700'"></div>
+          <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+               [ngClass]="step >= 3 ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-500'">&#10003;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-3xl mx-auto px-6 py-8">
+
+    <!-- ═══ STEP 1: School Info ═══ -->
+    <div *ngIf="step === 1" class="bg-slate-800 rounded-2xl border border-slate-700 p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-11 h-11 bg-indigo-500/10 rounded-xl flex items-center justify-center">
+          <span class="text-xl">🏫</span>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-white">School Information</h2>
+          <p class="text-sm text-slate-400">Tell us about the preschool</p>
+        </div>
+      </div>
+
+      <form [formGroup]="schoolForm" (ngSubmit)="nextStep()" class="space-y-5">
+        <!-- School Name -->
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1.5">School Name *</label>
+          <input formControlName="schoolName"
+                 (input)="onSchoolNameChange()"
+                 type="text"
+                 placeholder="e.g. Little Hearts Academy"
+                 class="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors" />
+          <p *ngIf="schoolForm.get('schoolName')?.touched && schoolForm.get('schoolName')?.invalid"
+             class="text-xs text-red-400 mt-1">School name is required</p>
+        </div>
+
+        <!-- Subdomain -->
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1.5">Subdomain *</label>
+          <div class="flex items-center gap-0">
+            <input formControlName="subdomain"
+                   type="text"
+                   placeholder="little-hearts"
+                   class="flex-1 px-4 py-3 rounded-l-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors" />
+            <span class="px-4 py-3 bg-slate-700 border border-l-0 border-slate-600 rounded-r-xl text-sm text-slate-400 whitespace-nowrap">.scholaro.app</span>
+          </div>
+          <p *ngIf="schoolForm.get('subdomain')?.touched && schoolForm.get('subdomain')?.hasError('pattern')"
+             class="text-xs text-red-400 mt-1">Only lowercase letters, numbers, and hyphens</p>
+          <p *ngIf="schoolForm.get('subdomain')?.touched && schoolForm.get('subdomain')?.hasError('required')"
+             class="text-xs text-red-400 mt-1">Subdomain is required</p>
+        </div>
+
+        <!-- Location -->
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1.5">Location</label>
+          <input formControlName="location"
+                 type="text"
+                 placeholder="Whitefield, Bangalore"
+                 class="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors" />
+        </div>
+
+        <div class="pt-2">
+          <button type="submit"
+                  class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+            Continue to Admin Setup
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ═══ STEP 2: Admin Info ═══ -->
+    <div *ngIf="step === 2" class="bg-slate-800 rounded-2xl border border-slate-700 p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-11 h-11 bg-violet-500/10 rounded-xl flex items-center justify-center">
+          <span class="text-xl">👤</span>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-white">School Admin Setup</h2>
+          <p class="text-sm text-slate-400">This person will manage {{ schoolForm.value.schoolName }}</p>
+        </div>
+      </div>
+
+      <!-- School summary pill -->
+      <div class="mb-6 px-4 py-3 bg-slate-700/40 rounded-xl border border-slate-600/50 flex items-center gap-3">
+        <span class="text-lg">🏫</span>
+        <div>
+          <p class="text-sm font-semibold text-white">{{ schoolForm.value.schoolName }}</p>
+          <p class="text-xs text-slate-400">{{ schoolForm.value.subdomain }}.scholaro.app &middot; {{ schoolForm.value.location }}</p>
+        </div>
+      </div>
+
+      <form [formGroup]="adminForm" (ngSubmit)="launch()" class="space-y-5">
+        <!-- Contact Name -->
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1.5">Contact Person Name *</label>
+          <input formControlName="adminName"
+                 type="text"
+                 placeholder="e.g. Priya Sharma"
+                 class="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors" />
+          <p *ngIf="adminForm.get('adminName')?.touched && adminForm.get('adminName')?.invalid"
+             class="text-xs text-red-400 mt-1">Name is required</p>
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1.5">Email Address *</label>
+          <input formControlName="adminEmail"
+                 type="email"
+                 placeholder="priya@littlehearts.com"
+                 class="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors" />
+          <p *ngIf="adminForm.get('adminEmail')?.touched && adminForm.get('adminEmail')?.invalid"
+             class="text-xs text-red-400 mt-1">Valid email is required</p>
+        </div>
+
+        <!-- Phone -->
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1.5">Phone Number</label>
+          <input formControlName="phone"
+                 type="tel"
+                 placeholder="+91 98765 43210"
+                 class="w-full px-4 py-3 rounded-xl bg-slate-700/50 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors" />
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="error" class="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm">
+          {{ error }}
+        </div>
+
+        <div class="pt-2 flex gap-3">
+          <button type="button" (click)="prevStep()"
+                  class="px-6 py-3.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium text-sm transition-colors border border-slate-600">
+            Back
+          </button>
+          <button type="submit" [disabled]="submitting"
+                  class="flex-1 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+            <svg *ngIf="submitting" class="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span *ngIf="!submitting">🚀</span>
+            {{ submitting ? 'Launching...' : 'Launch School' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ═══ STEP 3: Welcome Kit ═══ -->
+    <div *ngIf="step === 3 && result" class="space-y-6">
+
+      <!-- Success banner -->
+      <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-8 text-center">
+        <div class="text-5xl mb-4">🎉</div>
+        <h2 class="text-2xl font-bold text-white mb-2">School Launched Successfully!</h2>
+        <p class="text-slate-400">{{ result.school_name }} is now live on the Scholaro platform</p>
+      </div>
+
+      <!-- Welcome Kit Card -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-8">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-11 h-11 bg-amber-500/10 rounded-xl flex items-center justify-center">
+            <span class="text-xl">📋</span>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white">Welcome Kit</h3>
+            <p class="text-sm text-slate-400">Share these credentials with the school admin</p>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Login URL -->
+          <div class="flex items-center justify-between px-4 py-3 bg-slate-700/40 rounded-xl border border-slate-600/50">
+            <div>
+              <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-0.5">Login URL</p>
+              <p class="text-sm text-indigo-400 font-mono">{{ result.subdomain }}.scholaro.app</p>
+            </div>
+            <button (click)="copyToClipboard(result.subdomain + '.scholaro.app')" title="Copy"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-600 text-slate-400 hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Tenant ID -->
+          <div class="flex items-center justify-between px-4 py-3 bg-slate-700/40 rounded-xl border border-slate-600/50">
+            <div>
+              <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-0.5">Tenant ID (School Code)</p>
+              <p class="text-sm text-white font-mono">{{ result.tenant_id }}</p>
+            </div>
+            <button (click)="copyToClipboard(result.tenant_id)" title="Copy"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-600 text-slate-400 hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Email -->
+          <div class="flex items-center justify-between px-4 py-3 bg-slate-700/40 rounded-xl border border-slate-600/50">
+            <div>
+              <p class="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-0.5">Admin Email</p>
+              <p class="text-sm text-white">{{ result.admin_email }}</p>
+            </div>
+            <button (click)="copyToClipboard(result.admin_email)" title="Copy"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-600 text-slate-400 hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Password -->
+          <div class="flex items-center justify-between px-4 py-3 bg-amber-500/5 rounded-xl border border-amber-500/20">
+            <div>
+              <p class="text-xs text-amber-500/80 uppercase tracking-wider font-semibold mb-0.5">Temporary Password</p>
+              <p class="text-sm text-amber-400 font-mono font-bold">{{ result.temporary_password }}</p>
+            </div>
+            <button (click)="copyToClipboard(result.temporary_password)" title="Copy"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-600 text-amber-400 hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-500 mt-5 flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          The school admin should change the password on first login
+        </p>
+      </div>
+
+      <!-- Next Steps -->
+      <div class="bg-slate-800 rounded-2xl border border-slate-700 p-6">
+        <h4 class="text-sm font-semibold text-white mb-3">What happens next?</h4>
+        <ol class="space-y-2 text-sm text-slate-400">
+          <li class="flex items-start gap-2">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+            Share the Welcome Kit credentials with the school admin
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+            School admin logs in and uses Bulk Upload to import students &amp; teachers
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+            Teachers &amp; parents download the app and start using it
+          </li>
+        </ol>
+      </div>
+
+      <button (click)="goToDashboard()"
+              class="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-colors">
+        ← Back to Platform Dashboard
+      </button>
+    </div>
+
+  </div>
+</div>

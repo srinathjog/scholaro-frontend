@@ -1,0 +1,163 @@
+<div class="px-4 sm:px-6 py-6">
+  <!-- Header -->
+  <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Parent Directory</h1>
+      <p class="text-sm text-gray-500 mt-1">All parent accounts and family connections</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="px-3 py-1.5 bg-violet-50 text-violet-700 text-sm font-semibold rounded-lg">
+        {{ filteredParents.length }} parent{{ filteredParents.length !== 1 ? 's' : '' }}
+      </span>
+      <button (click)="openCreateModal()"
+              class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-lg transition-colors shadow-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Create Parent
+      </button>
+    </div>
+  </div>
+
+  <!-- Search bar -->
+  <div class="mb-5">
+    <div class="relative max-w-lg">
+      <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input type="text"
+             [(ngModel)]="searchQuery"
+             (ngModelChange)="onSearch()"
+             placeholder="Search by parent name, email, or child's name…"
+             class="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white shadow-sm" />
+    </div>
+  </div>
+
+  <!-- Success toast -->
+  <div *ngIf="successMessage" class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl mb-4 text-sm flex items-center gap-2">
+    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    {{ successMessage }}
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">
+    {{ error }}
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex items-center justify-center py-20">
+    <svg class="animate-spin h-8 w-8 text-violet-500" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+    </svg>
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!loading && !error && filteredParents.length === 0"
+       class="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+    <div class="text-4xl mb-3">👨‍👩‍👧‍👦</div>
+    <h3 class="text-lg font-semibold text-gray-800">No parents found</h3>
+    <p *ngIf="searchQuery" class="text-sm text-gray-400 mt-1">Try a different search term</p>
+    <p *ngIf="!searchQuery" class="text-sm text-gray-400 mt-1">Use Bulk Upload to import students with parent info, or click "Create Parent"</p>
+  </div>
+
+  <!-- Parent Table -->
+  <div *ngIf="!loading && filteredParents.length > 0"
+       class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[700px]">
+        <thead class="bg-gray-50/80">
+          <tr>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Parent Name</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Contact</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Children</th>
+            <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr *ngFor="let p of filteredParents" class="hover:bg-gray-50/50 transition-colors">
+            <!-- Parent Name -->
+            <td class="px-5 py-4">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-violet-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="text-sm font-bold text-violet-700">{{ p.name.charAt(0).toUpperCase() }}</span>
+                </div>
+                <span class="font-medium text-gray-900">{{ p.name }}</span>
+              </div>
+            </td>
+            <!-- Contact -->
+            <td class="px-5 py-4">
+              <p class="text-gray-700">{{ p.email }}</p>
+            </td>
+            <!-- Children tags -->
+            <td class="px-5 py-4">
+              <div *ngIf="p.children.length" class="flex flex-wrap gap-1.5">
+                <span *ngFor="let c of p.children"
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                  {{ c.name }}
+                  <span class="text-blue-400 text-[10px] font-normal">({{ c.relationship }})</span>
+                </span>
+              </div>
+              <span *ngIf="!p.children.length" class="text-gray-400 text-xs italic">No children linked</span>
+            </td>
+            <!-- Status -->
+            <td class="px-5 py-4">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    [ngClass]="p.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'">
+                {{ p.status }}
+              </span>
+            </td>
+            <!-- Actions -->
+            <td class="px-5 py-4 text-right">
+              <button (click)="resetPassword(p)"
+                      [disabled]="resettingId === p.id"
+                      class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors disabled:opacity-50">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {{ resettingId === p.id ? 'Resetting…' : 'Reset Password' }}
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Create Parent Modal -->
+<div *ngIf="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h3 class="text-lg font-semibold text-gray-900">Create Parent Account</h3>
+      <button (click)="closeCreateModal()" class="text-gray-400 hover:text-gray-600">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+        <input type="text" [(ngModel)]="newParentName" placeholder="e.g. Rahul Sharma"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+        <input type="email" [(ngModel)]="newParentEmail" placeholder="parent@example.com"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+        <input type="tel" [(ngModel)]="newParentPhone" placeholder="9876543210"
+               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500" />
+      </div>
+      <p class="text-xs text-gray-400">Default password: <span class="font-mono">Welcome&#64;123</span></p>
+      <button (click)="createParent()" [disabled]="creating || !newParentName || !newParentEmail"
+              class="w-full py-2.5 text-sm font-semibold text-white bg-violet-600 hover:bg-violet-700 rounded-lg disabled:opacity-50 transition-colors">
+        {{ creating ? 'Creating…' : 'Create Parent Account' }}
+      </button>
+    </div>
+  </div>
+</div>

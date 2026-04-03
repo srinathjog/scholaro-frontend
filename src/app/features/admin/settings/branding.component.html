@@ -1,0 +1,258 @@
+<div class="px-6 py-6">
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="flex items-center justify-center py-20">
+    <svg class="animate-spin h-8 w-8 text-indigo-500" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+    </svg>
+  </div>
+
+  <div *ngIf="!loading" class="max-w-5xl mx-auto">
+
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-2xl font-bold text-gray-900">School Branding</h1>
+      <p class="text-sm text-gray-500 mt-1">Customize colors, logo, and motto — parents will see these in the app</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+      <!-- ═══ Left Column: Controls (3/5) ═══ -->
+      <div class="lg:col-span-3 space-y-6">
+
+        <!-- Logo Upload Card -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+            <h2 class="text-sm font-semibold text-gray-800">School Logo</h2>
+          </div>
+          <div class="p-6">
+            <!-- Drop zone (no logo) -->
+            <div *ngIf="!logoPreview"
+                 (drop)="onLogoDrop($event)" (dragover)="onDragOver($event)"
+                 class="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center hover:border-indigo-300 transition-colors cursor-pointer relative">
+              <input type="file" accept="image/*" (change)="onLogoFileSelected($event)"
+                     class="absolute inset-0 opacity-0 cursor-pointer" />
+              <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-7 h-7 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <p class="text-sm font-semibold text-gray-700 mb-1">Drop your logo here or click to browse</p>
+              <p class="text-xs text-gray-400">PNG, JPG, or SVG — recommended 200×200px</p>
+            </div>
+
+            <!-- Logo preview -->
+            <div *ngIf="logoPreview" class="flex items-center gap-6">
+              <div class="w-28 h-28 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden bg-gray-50 shrink-0">
+                <img [src]="logoPreview" alt="School logo" class="max-w-full max-h-full object-contain" />
+              </div>
+              <div class="space-y-2">
+                <p class="text-sm font-medium text-gray-700">Logo uploaded</p>
+                <div class="flex gap-2">
+                  <label class="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-semibold cursor-pointer hover:bg-indigo-100 transition-colors relative">
+                    Change
+                    <input type="file" accept="image/*" (change)="onLogoFileSelected($event)" class="absolute inset-0 opacity-0 cursor-pointer" />
+                  </label>
+                  <button (click)="removeLogo()"
+                          class="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors">
+                    Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Colors Card -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+            <h2 class="text-sm font-semibold text-gray-800">Brand Colors</h2>
+          </div>
+          <div class="p-6 space-y-5">
+            <!-- Primary Color -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Primary Color</label>
+              <div class="flex items-center gap-3">
+                <div class="relative">
+                  <input type="color" [(ngModel)]="primaryColor"
+                         class="w-12 h-12 rounded-xl border-2 border-gray-200 cursor-pointer appearance-none p-0.5" />
+                </div>
+                <div class="flex-1">
+                  <input type="text" [(ngModel)]="primaryColor" maxlength="7"
+                         class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400" />
+                </div>
+                <div class="w-20 h-10 rounded-lg shadow-inner" [style.backgroundColor]="primaryColor"></div>
+              </div>
+              <p class="text-xs text-gray-400 mt-1.5">Used for headers, buttons, and navigation</p>
+            </div>
+
+            <!-- Secondary Color -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Secondary Color</label>
+              <div class="flex items-center gap-3">
+                <div class="relative">
+                  <input type="color" [(ngModel)]="secondaryColor"
+                         class="w-12 h-12 rounded-xl border-2 border-gray-200 cursor-pointer appearance-none p-0.5" />
+                </div>
+                <div class="flex-1">
+                  <input type="text" [(ngModel)]="secondaryColor" maxlength="7"
+                         class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400" />
+                </div>
+                <div class="w-20 h-10 rounded-lg shadow-inner" [style.backgroundColor]="secondaryColor"></div>
+              </div>
+              <p class="text-xs text-gray-400 mt-1.5">Used for accents, badges, and success states</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Motto & Contact Card -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+            <h2 class="text-sm font-semibold text-gray-800">Details</h2>
+          </div>
+          <div class="p-6 space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">School Motto</label>
+              <input type="text" [(ngModel)]="schoolMotto" placeholder="e.g. Nurturing Young Minds"
+                     class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Contact Phone</label>
+              <input type="text" [(ngModel)]="contactPhone" placeholder="+91 98765 43210"
+                     class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Save Button -->
+        <div class="flex items-center gap-4">
+          <button (click)="save()" [disabled]="saving"
+                  class="px-8 py-3 rounded-xl text-white font-semibold text-sm transition-all flex items-center gap-2 shadow-sm hover:shadow-md disabled:opacity-50"
+                  [style.backgroundColor]="primaryColor">
+            <svg *ngIf="saving" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            {{ saving ? 'Saving...' : 'Save Branding' }}
+          </button>
+          <span *ngIf="saved" class="text-sm font-medium text-green-600 flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Saved!
+          </span>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="error" class="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+          {{ error }}
+        </div>
+      </div>
+
+      <!-- ═══ Right Column: Live Preview (2/5) ═══ -->
+      <div class="lg:col-span-2">
+        <div class="sticky top-6 space-y-4">
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Live Preview — Parent Timeline</p>
+
+          <!-- Phone Mockup -->
+          <div class="bg-gray-900 rounded-[2rem] p-3 shadow-2xl">
+            <div class="bg-white rounded-[1.4rem] overflow-hidden" style="min-height: 480px;">
+
+              <!-- Status bar -->
+              <div class="flex items-center justify-between px-5 py-1.5 text-[10px] text-gray-500">
+                <span>9:41</span>
+                <div class="flex gap-1">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h1a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm5-4a1 1 0 011-1h1a1 1 0 011 1v9a1 1 0 01-1 1H8a1 1 0 01-1-1V7zm5-4a1 1 0 011-1h1a1 1 0 011 1v13a1 1 0 01-1 1h-1a1 1 0 01-1-1V3z"/></svg>
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M17.778 8.222c-4.296-4.296-11.26-4.296-15.556 0A1 1 0 01.808 6.808c5.076-5.076 13.308-5.076 18.384 0a1 1 0 01-1.414 1.414zM14.95 11.05a7 7 0 00-9.9 0 1 1 0 01-1.414-1.414 9 9 0 0112.728 0 1 1 0 01-1.414 1.414zM12.12 13.88a3 3 0 00-4.242 0 1 1 0 01-1.415-1.415 5 5 0 017.072 0 1 1 0 01-1.415 1.415zM9 16a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/></svg>
+                </div>
+              </div>
+
+              <!-- App Header -->
+              <div class="px-4 py-3 flex items-center gap-3" [style.backgroundColor]="primaryColor">
+                <div *ngIf="logoPreview" class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center overflow-hidden">
+                  <img [src]="logoPreview" alt="Logo" class="w-6 h-6 object-contain" />
+                </div>
+                <div *ngIf="!logoPreview" class="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                  <span class="text-white text-xs font-bold">S</span>
+                </div>
+                <div>
+                  <p class="text-white text-sm font-bold leading-tight">My School</p>
+                  <p *ngIf="schoolMotto" class="text-white/70 text-[10px] leading-tight">{{ schoolMotto }}</p>
+                </div>
+              </div>
+
+              <!-- Timeline content -->
+              <div class="px-4 py-3 space-y-3">
+                <!-- Date badge -->
+                <div class="flex justify-center">
+                  <span class="px-3 py-1 rounded-full text-[10px] font-semibold text-white"
+                        [style.backgroundColor]="secondaryColor">Today</span>
+                </div>
+
+                <!-- Activity card 1 -->
+                <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div class="h-24 bg-gradient-to-br from-amber-100 to-orange-50 flex items-center justify-center">
+                    <span class="text-3xl">🎨</span>
+                  </div>
+                  <div class="px-3 py-2.5">
+                    <div class="flex items-center gap-1.5 mb-1">
+                      <span class="w-1.5 h-1.5 rounded-full" [style.backgroundColor]="primaryColor"></span>
+                      <span class="text-[10px] font-semibold" [style.color]="primaryColor">Art Class</span>
+                    </div>
+                    <p class="text-xs text-gray-700 font-medium leading-tight">Aarav painted a beautiful landscape today!</p>
+                    <div class="flex items-center gap-1.5 mt-2">
+                      <span class="px-2 py-0.5 rounded-full text-[9px] font-medium text-white"
+                            [style.backgroundColor]="secondaryColor">Nursery A</span>
+                      <span class="text-[9px] text-gray-400">10:30 AM</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Activity card 2 -->
+                <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div class="px-3 py-2.5">
+                    <div class="flex items-center gap-1.5 mb-1">
+                      <span class="w-1.5 h-1.5 rounded-full" [style.backgroundColor]="primaryColor"></span>
+                      <span class="text-[10px] font-semibold" [style.color]="primaryColor">Daily Log</span>
+                    </div>
+                    <p class="text-xs text-gray-700 font-medium leading-tight">Lunch: Ate well 🍽️ | Nap: 1hr 😴</p>
+                    <div class="flex items-center gap-1.5 mt-2">
+                      <span class="px-2 py-0.5 rounded-full text-[9px] font-medium text-white"
+                            [style.backgroundColor]="secondaryColor">Ms. Priya</span>
+                      <span class="text-[9px] text-gray-400">1:00 PM</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Bottom nav mockup -->
+                <div class="flex items-center justify-around pt-2 mt-2 border-t border-gray-100">
+                  <div class="flex flex-col items-center gap-0.5">
+                    <svg class="w-4 h-4" [style.color]="primaryColor" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3" />
+                    </svg>
+                    <span class="text-[8px] font-medium" [style.color]="primaryColor">Home</span>
+                  </div>
+                  <div class="flex flex-col items-center gap-0.5">
+                    <svg class="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <span class="text-[8px] text-gray-300">Alerts</span>
+                  </div>
+                  <div class="flex flex-col items-center gap-0.5">
+                    <svg class="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span class="text-[8px] text-gray-300">Profile</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-gray-400 text-center">Changes preview in real-time</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

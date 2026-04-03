@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { SuperAdminService, PlatformStats } from '../../../data/services/super-admin.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Subject, takeUntil } from 'rxjs';
@@ -7,7 +8,7 @@ import { Subject, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-super-admin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './super-admin-dashboard.component.html',
 })
 export class SuperAdminDashboardComponent implements OnInit, OnDestroy {

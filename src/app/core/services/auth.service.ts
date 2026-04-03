@@ -12,6 +12,7 @@ interface JwtPayload {
   tenantId: string;
   roles: string[];
   email?: string;
+  isFirstLogin?: boolean;
   exp: number;
   iat: number;
   [key: string]: any;
@@ -24,6 +25,7 @@ export interface CurrentUser {
   roles: string[];
   tenantId: string;
   token: string;
+  isFirstLogin: boolean;
 }
 
 @Injectable({
@@ -63,6 +65,7 @@ export class AuthService {
             roles: payload.roles || [],
             tenantId: payload.tenantId || tenantId,
             token: res.access_token,
+            isFirstLogin: payload.isFirstLogin || false,
           };
           this.currentUserSubject.next(user);
         }
@@ -124,6 +127,30 @@ export class AuthService {
       roles: payload.roles || [],
       tenantId: payload.tenantId || '',
       token,
+      isFirstLogin: payload.isFirstLogin || false,
     };
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/change-password`, {
+      currentPassword,
+      newPassword,
+    }).pipe(
+      tap(() => {
+        // Update local state so the banner disappears
+        const cur = this.currentUserSubject.value;
+        if (cur) {
+          this.currentUserSubject.next({ ...cur, isFirstLogin: false });
+        }
+      }),
+    );
+  }
+
+  requestPasswordReset(email: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/forgot-password`, { email });
+  }
+
+  completePasswordReset(token: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, { token, newPassword });
   }
 }

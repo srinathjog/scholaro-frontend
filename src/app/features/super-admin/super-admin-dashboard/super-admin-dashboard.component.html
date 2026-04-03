@@ -39,6 +39,13 @@
       </div>
       <div class="flex items-center gap-3">
         <span class="text-xs text-slate-500 font-mono">{{ stats.total_schools }} tenants managed</span>
+        <a routerLink="/super-admin/onboard"
+           class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          New School
+        </a>
         <button (click)="logout()" title="Logout"
                 class="w-9 h-9 flex items-center justify-center rounded-lg bg-slate-700 hover:bg-red-600/80 text-slate-300 hover:text-white transition-colors border border-slate-600 hover:border-red-500">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
