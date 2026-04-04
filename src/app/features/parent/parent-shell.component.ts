@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { PushNotificationService } from '../../core/services/push-notification.service';
 
 @Component({
   selector: 'app-parent-shell',
@@ -47,8 +48,15 @@ import { AuthService } from '../../core/services/auth.service';
     .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
   `],
 })
-export class ParentShellComponent {
+export class ParentShellComponent implements OnInit {
+  private pushService = inject(PushNotificationService);
+
   constructor(private authService: AuthService, private router: Router) {}
+
+  ngOnInit(): void {
+    // Auto-subscribe parent for push notifications (non-blocking)
+    this.pushService.subscribe();
+  }
 
   logout(): void {
     this.authService.logout();

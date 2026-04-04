@@ -1,63 +1,50 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { SwPush } from '@angular/service-worker';
 import { environment } from '../../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class PushNotificationService {
-  private swRegistration: ServiceWorkerRegistration | null = null;
+  private http = inject(HttpClient);
+  private swPush = inject(SwPush, { optional: true });
 
-  constructor(private http: HttpClient) {}
-
-  /** Initialize push notifications — call once after login */
-  async init(): Promise<void> {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      console.warn('Push notifications not supported in this browser');
-      return;
-    }
-
-    try {
-      this.swRegistration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service worker registered');
-    } catch (err) {
-      console.error('Service worker registration failed:', err);
-    }
+  /** True if the browser supports push and the service worker is active */
+  get isSupported(): boolean {
+    return !!this.swPush?.isEnabled;
   }
 
-  /** Subscribe the user's browser and send the subscription to the backend */
+  /**
+   * Request push permission, subscribe via the Angular service worker,
+   * and store the subscription on the backend.
+   * Returns true if successfully subscribed.
+   */
   async subscribe(): Promise<boolean> {
-    if (!this.swRegistration) {
-      await this.init();
-    }
-    if (!this.swRegistration) return false;
+    if (!this.isSupported) return false;
 
     try {
-      // 1. Get the VAPID public key from backend
-      const { publicKey } = await this.http
-        .get<{ publicKey: string }>(`${environment.apiUrl}/notifications/vapid-public-key`)
-        .toPromise() as { publicKey: string };
+      // 1. Get VAPID public key from backend
+      const { publicKey } = await firstValueFrom(
+        this.http.get<{ publicKey: string }>(`${environment.apiUrl}/notifications/vapid-public-key`),
+      );
+      if (!publicKey) return false;
 
-      if (!publicKey) {
-        console.warn('No VAPID public key configured on server');
-        return false;
-      }
-
-      // 2. Subscribe in the browser
-      const subscription = await this.swRegistration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: this.urlBase64ToUint8Array(publicKey) as BufferSource,
+      // 2. Ask browser for push permission + create subscription
+      const sub = await this.swPush.requestSubscription({
+        serverPublicKey: publicKey,
       });
 
-      // 3. Send the subscription to our backend
-      const raw = subscription.toJSON();
-      await this.http
-        .post(`${environment.apiUrl}/notifications/subscribe`, {
+      // 3. Send subscription to backend
+      const raw = sub.toJSON();
+      await firstValueFrom(
+        this.http.post(`${environment.apiUrl}/notifications/subscribe`, {
           endpoint: raw.endpoint,
           keys: {
             p256dh: raw.keys?.['p256dh'],
             auth: raw.keys?.['auth'],
           },
-        })
-        .toPromise();
+        }),
+      );
 
       console.log('Push subscription registered');
       return true;
@@ -69,34 +56,28 @@ export class PushNotificationService {
 
   /** Check if currently subscribed */
   async isSubscribed(): Promise<boolean> {
-    if (!this.swRegistration) return false;
-    const sub = await this.swRegistration.pushManager.getSubscription();
+    if (!this.isSupported) return false;
+    const sub = await navigator.serviceWorker.ready
+      .then(reg => reg.pushManager.getSubscription());
     return !!sub;
   }
 
   /** Unsubscribe from push */
   async unsubscribe(): Promise<void> {
-    if (!this.swRegistration) return;
-    const sub = await this.swRegistration.pushManager.getSubscription();
-    if (sub) {
-      await this.http
-        .delete(`${environment.apiUrl}/notifications/subscribe`, {
-          body: { endpoint: sub.endpoint },
-        })
-        .toPromise();
-      await sub.unsubscribe();
+    if (!this.isSupported) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await firstValueFrom(
+          this.http.delete(`${environment.apiUrl}/notifications/subscribe`, {
+            body: { endpoint: sub.endpoint },
+          }),
+        );
+        await sub.unsubscribe();
+      }
+    } catch {
+      // Silently ignore
     }
-  }
-
-  /** Convert a URL-safe base64 VAPID key to a Uint8Array */
-  private urlBase64ToUint8Array(base64String: string): Uint8Array {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
   }
 }
