@@ -1,15 +1,41 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { PushNotificationService } from '../../core/services/push-notification.service';
+import { PwaService } from '../../core/services/pwa.service';
 
 @Component({
   selector: 'app-parent-shell',
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <div class="min-h-screen pb-16">
+    <!-- Install Banner -->
+    <div *ngIf="showInstallBanner"
+         class="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg safe-area-top">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+        </div>
+        <p class="text-sm font-medium truncate">Add Scholaro to your Home Screen for instant updates</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button (click)="installApp()"
+                class="px-3 py-1.5 bg-white text-indigo-700 text-xs font-bold rounded-lg hover:bg-indigo-50 transition-colors">
+          Install
+        </button>
+        <button (click)="dismissInstallBanner()"
+                class="p-1 text-white/70 hover:text-white transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="min-h-screen pb-16" [class.pt-14]="showInstallBanner">
       <router-outlet></router-outlet>
     </div>
 
@@ -50,12 +76,36 @@ import { PushNotificationService } from '../../core/services/push-notification.s
 })
 export class ParentShellComponent implements OnInit {
   private pushService = inject(PushNotificationService);
+  private pwaService = inject(PwaService);
+  private cdr = inject(ChangeDetectorRef);
+
+  showInstallBanner = false;
 
   constructor(private authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
     // Auto-subscribe parent for push notifications (non-blocking)
     this.pushService.subscribe();
+
+    // Show install banner if app is installable and user hasn't dismissed it
+    if (!localStorage.getItem('scholaro_install_dismissed')) {
+      this.pwaService.showInstallPrompt$.subscribe(installable => {
+        this.showInstallBanner = installable;
+        this.cdr.detectChanges();
+      });
+    }
+  }
+
+  async installApp(): Promise<void> {
+    await this.pwaService.installApp();
+    this.showInstallBanner = false;
+    this.cdr.detectChanges();
+  }
+
+  dismissInstallBanner(): void {
+    this.showInstallBanner = false;
+    localStorage.setItem('scholaro_install_dismissed', 'true');
+    this.cdr.detectChanges();
   }
 
   logout(): void {
