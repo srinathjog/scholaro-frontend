@@ -26,20 +26,16 @@
       </div>
 
       <!-- Class selector -->
-      <div class="relative">
+      <div>
         <select [(ngModel)]="selectedClassId" (ngModelChange)="onClassChange()"
-                class="w-full appearance-none bg-slate-100 rounded-xl px-4 py-2.5 pr-10
-                       text-sm font-semibold text-gray-800 border-0 focus:ring-2 focus:ring-emerald-500
-                       cursor-pointer">
+                class="w-full rounded-xl bg-white px-4 py-2.5
+                       text-sm font-semibold text-gray-800 border border-gray-200 focus:ring-2 focus:ring-teal-500
+                       focus:border-teal-500 outline-none shadow-sm">
           <option value="" disabled>Select a class…</option>
           <option *ngFor="let a of assignments" [value]="a.class_id">
             {{ a.assignedClass?.name || a.class_id }}{{ a.section ? ' — ' + a.section.name : '' }}
           </option>
         </select>
-        <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
-             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-        </svg>
       </div>
     </div>
   </div>

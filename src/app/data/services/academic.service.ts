@@ -20,11 +20,19 @@ export interface Section {
 
 export interface AcademicYear {
   id: string;
-  name: string;
+  year: string;
+  name?: string; // alias for year
   start_date: string;
   end_date: string;
   is_active: boolean;
   tenant_id: string;
+}
+
+export interface CreateAcademicYearPayload {
+  year: string;
+  start_date: string;
+  end_date: string;
+  is_active?: boolean;
 }
 
 export interface TeacherAssignment {
@@ -74,6 +82,14 @@ export class AcademicService {
 
   getAcademicYears(): Observable<AcademicYear[]> {
     return this.http.get<AcademicYear[]>(`${this.api}/academic-years`);
+  }
+
+  createAcademicYear(data: CreateAcademicYearPayload): Observable<AcademicYear> {
+    return this.http.post<AcademicYear>(`${this.api}/academic-years`, data);
+  }
+
+  setActiveAcademicYear(id: string): Observable<AcademicYear> {
+    return this.http.patch<AcademicYear>(`${this.api}/academic-years/${id}/set-active`, {});
   }
 
   getSectionStudentCounts(): Observable<SectionCount[]> {

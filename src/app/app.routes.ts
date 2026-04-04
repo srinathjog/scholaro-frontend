@@ -84,6 +84,11 @@ export const routes: Routes = [
 				loadComponent: () => import('./features/admin/academic/teacher-assignment.component').then(m => m.TeacherAssignmentComponent),
 				title: 'Staff Assignment',
 			},
+			{
+				path: 'academic-years',
+				loadComponent: () => import('./features/admin/academic/academic-year-list.component').then(m => m.AcademicYearListComponent),
+				title: 'Academic Years',
+			},
 		],
 	},
 	{

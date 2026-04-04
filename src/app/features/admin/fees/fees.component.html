@@ -12,8 +12,8 @@
         <!-- Class selector -->
         <div class="flex items-center gap-3">
           <select [(ngModel)]="selectedClassId" (ngModelChange)="onClassChange()"
-                  class="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold
-                         text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm"
+                  class="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium
+                         text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm"
                   [disabled]="loadingClasses">
             <option value="">Select Class</option>
             <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>

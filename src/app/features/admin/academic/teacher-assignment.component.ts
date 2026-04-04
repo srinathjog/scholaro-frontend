@@ -148,7 +148,7 @@ export class TeacherAssignmentComponent implements OnInit {
 
   private enrichAssignments(assignments: TeacherAssignment[]): void {
     const teacherMap = new Map(this.teachers.map(t => [t.id, t.name]));
-    const yearMap = new Map(this.academicYears.map(y => [y.id, y.name]));
+    const yearMap = new Map(this.academicYears.map(y => [y.id, y.year]));
     this.assignments = assignments.map(a => ({
       ...a,
       teacherName: teacherMap.get(a.teacher_id) || a.teacher_id.substring(0, 8) + '…',

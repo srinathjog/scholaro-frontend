@@ -39,7 +39,7 @@
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1.5">Teacher</label>
           <select [(ngModel)]="selectedTeacherId"
-                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                  class="w-full px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-xl bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm">
             <option value="">Select teacher…</option>
             <option *ngFor="let t of teachers" [value]="t.id">{{ t.name }}</option>
           </select>
@@ -50,7 +50,7 @@
           <label class="block text-xs font-medium text-gray-500 mb-1.5">Class</label>
           <select [(ngModel)]="selectedClassId"
                   (ngModelChange)="onClassChange()"
-                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                  class="w-full px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-xl bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm">
             <option value="">Select class…</option>
             <option *ngFor="let c of classes" [value]="c.id">{{ c.name }}</option>
           </select>
@@ -61,7 +61,7 @@
           <label class="block text-xs font-medium text-gray-500 mb-1.5">Section <span class="text-gray-300">(optional)</span></label>
           <select [(ngModel)]="selectedSectionId"
                   [disabled]="!selectedClassId || sections.length === 0"
-                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none disabled:bg-gray-50 disabled:text-gray-400">
+                  class="w-full px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-xl bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm disabled:bg-gray-50 disabled:text-gray-400">
             <option value="">All sections</option>
             <option *ngFor="let s of sections" [value]="s.id">{{ s.name }}</option>
           </select>
@@ -71,9 +71,9 @@
         <div>
           <label class="block text-xs font-medium text-gray-500 mb-1.5">Academic Year</label>
           <select [(ngModel)]="selectedAcademicYearId"
-                  class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+                  class="w-full px-4 py-2.5 text-sm font-medium border border-gray-200 rounded-xl bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm">
             <option value="">Select year…</option>
-            <option *ngFor="let y of academicYears" [value]="y.id">{{ y.name }}</option>
+            <option *ngFor="let y of academicYears" [value]="y.id">{{ y.year }}</option>
           </select>
         </div>
 
