@@ -49,11 +49,10 @@ export class AuthService {
     }
   }
 
-  login(email: string, password: string, tenantId: string): Observable<any> {
-    // Store tenant ID BEFORE the request so the TenantInterceptor can attach it as x-tenant-id header
-    this.tenantService.setTenantId(tenantId);
-
-    return this.http.post<any>(`${environment.apiUrl}/auth/login`, { email, password }).pipe(
+  login(email: string, password: string, schoolCode: string): Observable<any> {
+    return this.http.post<any>(`${environment.apiUrl}/auth/login`, {
+      email, password, school_code: schoolCode || undefined,
+    }).pipe(
       tap((res) => {
         if (res && res.access_token) {
           localStorage.setItem(this.TOKEN_KEY, res.access_token);
@@ -63,10 +62,14 @@ export class AuthService {
             email: payload.email || email,
             role: payload.roles?.[0] || '',
             roles: payload.roles || [],
-            tenantId: payload.tenantId || tenantId,
+            tenantId: payload.tenantId || '',
             token: res.access_token,
             isFirstLogin: payload.isFirstLogin || false,
           };
+          // Store real UUID from JWT for subsequent API calls
+          if (user.tenantId) {
+            this.tenantService.setTenantId(user.tenantId);
+          }
           this.currentUserSubject.next(user);
         }
       })
@@ -146,11 +149,15 @@ export class AuthService {
     );
   }
 
-  requestPasswordReset(email: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/forgot-password`, { email });
+  requestPasswordReset(email: string, schoolCode?: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/forgot-password`, {
+      email, school_code: schoolCode || undefined,
+    });
   }
 
-  completePasswordReset(token: string, newPassword: string): Observable<{ message: string }> {
-    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, { token, newPassword });
+  completePasswordReset(token: string, newPassword: string, schoolCode?: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/reset-password`, {
+      token, newPassword, school_code: schoolCode || undefined,
+    });
   }
 }

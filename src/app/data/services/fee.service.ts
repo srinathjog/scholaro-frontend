@@ -9,6 +9,7 @@ export interface FeeStructure {
   id: string;
   tenant_id: string;
   academic_year_id: string;
+  class_id: string;
   name: string;
   description?: string;
   amount: number;
@@ -90,6 +91,10 @@ export class FeeService {
     const params: any = {};
     if (academicYearId) params.academic_year_id = academicYearId;
     return this.http.get<FeeStructure[]>(`${this.apiUrl}/fees/structures`, { params });
+  }
+
+  deleteStructure(id: string): Observable<{ deleted: boolean }> {
+    return this.http.delete<{ deleted: boolean }>(`${this.apiUrl}/fees/structures/${id}`);
   }
 
   // ── Invoices ──

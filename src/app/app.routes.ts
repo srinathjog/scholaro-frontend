@@ -1,6 +1,7 @@
 
 import { Routes } from '@angular/router';
 import { RoleGuard } from './core/guards/role.guard';
+import { loginGuard } from './core/guards/login.guard';
 import { LoginComponent } from './features/auth/login/login.component';
 
 export const routes: Routes = [
@@ -12,6 +13,7 @@ export const routes: Routes = [
 	{
 		path: 'login',
 		component: LoginComponent,
+		canActivate: [loginGuard],
 		title: 'Login',
 	},
 	{
@@ -69,6 +71,7 @@ export const routes: Routes = [
 				loadComponent: () => import('./features/admin/fees/fees.component').then(m => m.FeesComponent),
 				title: 'Fee Management',
 			},
+
 			{
 				path: 'settings',
 				loadComponent: () => import('./features/admin/settings/branding.component').then(m => m.BrandingComponent),

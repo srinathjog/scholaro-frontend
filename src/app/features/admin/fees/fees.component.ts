@@ -5,11 +5,12 @@ import { HttpClient } from '@angular/common/http';
 import {
   FeeService,
   Fee,
+  FeeStructure,
   Defaulter,
   DefaultersReport,
   FeeSummary,
 } from '../../../data/services/fee.service';
-import { AuthService } from '../../../core/services/auth.service';
+import { AcademicService, AcademicYear } from '../../../data/services/academic.service';
 import { environment } from '../../../../environments/environment';
 
 @Component({
@@ -19,19 +20,22 @@ import { environment } from '../../../../environments/environment';
   templateUrl: './fees.component.html',
 })
 export class FeesComponent implements OnInit {
-  // ── Data ──
-  classes: { id: string; name: string }[] = [];
-  selectedClassId = '';
-  summary: FeeSummary | null = null;
-  defaultersReport: DefaultersReport | null = null;
+  // ── Tab ──
+  activeTab: 'dashboard' | 'structures' = 'dashboard';
 
-  // ── UI state ──
-  loading = false;
+  // ── Shared ──
+  classes: { id: string; name: string }[] = [];
   loadingClasses = true;
   errorMessage = '';
   successMessage = '';
 
-  // ── Payment modal ──
+  // ═══ DASHBOARD TAB ═══
+  selectedClassId = '';
+  summary: FeeSummary | null = null;
+  defaultersReport: DefaultersReport | null = null;
+  loading = false;
+
+  // Payment modal
   showPaymentModal = false;
   paymentFee: Fee | null = null;
   paymentStudentName = '';
@@ -40,22 +44,52 @@ export class FeesComponent implements OnInit {
   paymentReference = '';
   paymentProcessing = false;
 
-  // ── Reminder state ──
+  // Reminder state
   sendingReminder = new Set<string>();
   reminderSent = new Set<string>();
 
+  // ═══ STRUCTURES TAB ═══
+  structures: FeeStructure[] = [];
+  academicYears: AcademicYear[] = [];
+  selectedYearId = '';
+  loadingYears = true;
+  loadingStructures = false;
+
+  // Create modal
+  showCreateModal = false;
+  createForm = {
+    name: '',
+    description: '',
+    amount: '',
+    due_date: '',
+    class_id: '',
+    frequency: 'one_time' as 'one_time' | 'monthly' | 'quarterly' | 'yearly',
+  };
+  creating = false;
+
+  // Delete confirmation
+  deleteTarget: FeeStructure | null = null;
+  deleting = false;
+
   constructor(
     private feeService: FeeService,
-    private authService: AuthService,
+    private academicService: AcademicService,
     private http: HttpClient,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
     this.loadClasses();
+    this.loadAcademicYears();
   }
 
-  // ── Load classes for the selector ──
+  switchTab(tab: 'dashboard' | 'structures'): void {
+    this.activeTab = tab;
+    this.errorMessage = '';
+    this.successMessage = '';
+  }
+
+  // ─── Load classes ──
   private loadClasses(): void {
     this.loadingClasses = true;
     this.http.get<any[]>(`${environment.apiUrl}/classes`).subscribe({
@@ -76,7 +110,29 @@ export class FeesComponent implements OnInit {
     });
   }
 
-  // ── Load dashboard data ──
+  // ─── Load academic years ──
+  private loadAcademicYears(): void {
+    this.loadingYears = true;
+    this.academicService.getAcademicYears().subscribe({
+      next: (years) => {
+        this.academicYears = years;
+        this.loadingYears = false;
+        const active = years.find((y) => y.is_active);
+        if (active) {
+          this.selectedYearId = active.id;
+          this.loadStructures();
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loadingYears = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  // ═══════════════ DASHBOARD ═══════════════
+
   onClassChange(): void {
     if (this.selectedClassId) this.loadDashboard();
   }
@@ -87,7 +143,6 @@ export class FeesComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    // Parallel fetch summary + defaulters
     let loaded = 0;
     const done = () => {
       loaded++;
@@ -108,7 +163,6 @@ export class FeesComponent implements OnInit {
     });
   }
 
-  // ── Payment modal ──
   openPaymentModal(fee: Fee, studentName: string): void {
     this.paymentFee = fee;
     this.paymentStudentName = studentName;
@@ -156,12 +210,10 @@ export class FeesComponent implements OnInit {
     });
   }
 
-  // ── Send reminder ──
   sendReminder(defaulter: Defaulter): void {
     this.sendingReminder.add(defaulter.enrollment_id);
     this.cdr.detectChanges();
 
-    // Send reminders for each unpaid fee via the dedicated endpoint
     const feeIds = defaulter.fees.map((f) => f.id);
     let completed = 0;
 
@@ -189,7 +241,6 @@ export class FeesComponent implements OnInit {
     }
   }
 
-  // ── Mark overdue batch ──
   markOverdue(): void {
     this.feeService.markOverdue().subscribe({
       next: (result) => {
@@ -203,14 +254,115 @@ export class FeesComponent implements OnInit {
     });
   }
 
-  // ── Helpers ──
+  // ═══════════════ STRUCTURES ═══════════════
+
+  onYearChange(): void {
+    if (this.selectedYearId) this.loadStructures();
+  }
+
+  loadStructures(): void {
+    if (!this.selectedYearId) return;
+    this.loadingStructures = true;
+
+    this.feeService.getStructures(this.selectedYearId).subscribe({
+      next: (structures) => {
+        this.structures = structures;
+        this.loadingStructures = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.errorMessage = 'Failed to load fee structures.';
+        this.loadingStructures = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  openCreateModal(): void {
+    this.createForm = { name: '', description: '', amount: '', due_date: '', class_id: '', frequency: 'one_time' };
+    this.showCreateModal = true;
+  }
+
+  closeCreateModal(): void {
+    this.showCreateModal = false;
+  }
+
+  submitCreate(): void {
+    if (!this.createForm.name || !this.createForm.amount || !this.createForm.due_date || !this.createForm.class_id) return;
+    this.creating = true;
+
+    this.feeService.createStructure({
+      academic_year_id: this.selectedYearId,
+      class_id: this.createForm.class_id,
+      name: this.createForm.name,
+      description: this.createForm.description || undefined,
+      amount: parseFloat(this.createForm.amount) as any,
+      due_date: this.createForm.due_date,
+      frequency: this.createForm.frequency,
+    }).subscribe({
+      next: () => {
+        this.creating = false;
+        this.successMessage = `Fee structure "${this.createForm.name}" created!`;
+        this.closeCreateModal();
+        this.loadStructures();
+      },
+      error: (err) => {
+        this.creating = false;
+        this.errorMessage = err?.error?.message || 'Failed to create fee structure.';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  confirmDelete(structure: FeeStructure): void {
+    this.deleteTarget = structure;
+  }
+
+  cancelDelete(): void {
+    this.deleteTarget = null;
+  }
+
+  executeDelete(): void {
+    if (!this.deleteTarget) return;
+    this.deleting = true;
+
+    this.feeService.deleteStructure(this.deleteTarget.id).subscribe({
+      next: () => {
+        this.successMessage = `Fee structure "${this.deleteTarget!.name}" deleted.`;
+        this.deleteTarget = null;
+        this.deleting = false;
+        this.loadStructures();
+      },
+      error: (err) => {
+        this.errorMessage = err?.error?.message || 'Failed to delete fee structure.';
+        this.deleteTarget = null;
+        this.deleting = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  // ═══════════════ HELPERS ═══════════════
+
   get selectedClassName(): string {
     return this.classes.find((c) => c.id === this.selectedClassId)?.name || 'Class';
+  }
+
+  get selectedYearLabel(): string {
+    return this.academicYears.find((y) => y.id === this.selectedYearId)?.year || 'Year';
   }
 
   get collectionRate(): number {
     if (!this.summary || !this.summary.total_billed) return 0;
     return Math.round((this.summary.total_collected / (this.summary.total_billed - this.summary.total_discount)) * 100);
+  }
+
+  get totalStructureAmount(): number {
+    return this.structures.reduce((sum, s) => sum + Number(s.amount), 0);
+  }
+
+  className(classId: string): string {
+    return this.classes.find((c) => c.id === classId)?.name || '';
   }
 
   statusColor(status: string): string {
@@ -238,5 +390,25 @@ export class FeesComponent implements OnInit {
 
   isOverdue(dueDate: string): boolean {
     return new Date(dueDate) < new Date(new Date().toISOString().slice(0, 10));
+  }
+
+  frequencyLabel(f: string): string {
+    switch (f) {
+      case 'one_time': return 'One-Time';
+      case 'monthly': return 'Monthly';
+      case 'quarterly': return 'Quarterly';
+      case 'yearly': return 'Yearly';
+      default: return f;
+    }
+  }
+
+  frequencyColor(f: string): string {
+    switch (f) {
+      case 'one_time': return 'text-gray-700 bg-gray-50 border-gray-200';
+      case 'monthly': return 'text-blue-700 bg-blue-50 border-blue-200';
+      case 'quarterly': return 'text-violet-700 bg-violet-50 border-violet-200';
+      case 'yearly': return 'text-amber-700 bg-amber-50 border-amber-200';
+      default: return 'text-gray-700 bg-gray-50 border-gray-200';
+    }
   }
 }

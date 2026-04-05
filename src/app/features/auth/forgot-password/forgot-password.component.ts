@@ -101,9 +101,7 @@ export class ForgotPasswordComponent {
     this.loading = true;
     const { email, schoolCode } = this.form.value;
 
-    this.tenantService.setTenantId(schoolCode);
-
-    this.authService.requestPasswordReset(email).subscribe({
+    this.authService.requestPasswordReset(email, schoolCode).subscribe({
       next: (res) => {
         this.loading = false;
         this.successMessage = res.message || 'If that email exists, a reset link has been sent.';

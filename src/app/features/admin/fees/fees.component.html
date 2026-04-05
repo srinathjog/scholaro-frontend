@@ -1,372 +1,523 @@
-<!-- Fee Management Dashboard — Professional Admin Interface -->
+<!-- Fee Management — Unified Admin Interface with Tabs -->
 <div class="min-h-screen bg-gray-50">
 
   <!-- ─── TOP BAR ─── -->
   <div class="bg-white border-b border-gray-200 sticky top-0 z-30">
-    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-      <div class="flex items-center justify-between">
+    <div class="max-w-6xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <div>
-          <h1 class="text-2xl font-extrabold text-gray-900 tracking-tight">Fee Management</h1>
-          <p class="text-sm text-gray-500 mt-0.5">Track collections, manage payments, and send reminders</p>
+          <h1 class="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">Fee Management</h1>
+          <p class="text-xs text-gray-500 mt-0.5 hidden sm:block">Manage fee structures, track collections, and record payments</p>
         </div>
-        <!-- Class selector -->
-        <div class="flex items-center gap-3">
+
+        <!-- Dashboard controls -->
+        <div *ngIf="activeTab === 'dashboard'" class="flex items-center gap-2">
           <select [(ngModel)]="selectedClassId" (ngModelChange)="onClassChange()"
-                  class="px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-medium
+                  class="flex-1 sm:flex-none px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-medium
                          text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm"
                   [disabled]="loadingClasses">
             <option value="">Select Class</option>
             <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
           </select>
           <button *ngIf="selectedClassId" (click)="markOverdue()"
-                  class="px-4 py-2.5 rounded-xl bg-red-50 text-red-700 text-sm font-bold
-                         hover:bg-red-100 transition border border-red-200">
+                  class="px-3 py-2 rounded-lg bg-red-50 text-red-700 text-xs font-semibold
+                         hover:bg-red-100 transition border border-red-200 whitespace-nowrap">
             ⏰ Mark Overdue
           </button>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- ─── SUCCESS / ERROR TOASTS ─── -->
-  <div *ngIf="successMessage" class="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
-    <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-3 flex items-center justify-between">
-      <span class="text-emerald-800 font-semibold text-sm">✅ {{ successMessage }}</span>
-      <button (click)="successMessage = ''" class="text-emerald-400 hover:text-emerald-600 text-lg font-bold">×</button>
-    </div>
-  </div>
-  <div *ngIf="errorMessage" class="max-w-6xl mx-auto px-4 sm:px-6 pt-4">
-    <div class="rounded-xl bg-red-50 border border-red-200 px-5 py-3 flex items-center justify-between">
-      <span class="text-red-800 font-semibold text-sm">⚠️ {{ errorMessage }}</span>
-      <button (click)="errorMessage = ''" class="text-red-400 hover:text-red-600 text-lg font-bold">×</button>
-    </div>
-  </div>
-
-  <!-- ─── NO CLASS SELECTED ─── -->
-  <div *ngIf="!selectedClassId && !loadingClasses" class="max-w-6xl mx-auto px-4 sm:px-6 py-20 text-center">
-    <div class="w-24 h-24 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-6">
-      <span class="text-5xl">💰</span>
-    </div>
-    <h3 class="text-xl font-bold text-gray-900 mb-2">Select a class to get started</h3>
-    <p class="text-gray-400 text-sm max-w-sm mx-auto">
-      Choose a class from the dropdown to view fee collection summary, defaulters, and manage payments.
-    </p>
-  </div>
-
-  <!-- ─── LOADING ─── -->
-  <div *ngIf="loading" class="max-w-6xl mx-auto px-4 sm:px-6 py-16 text-center">
-    <div class="w-14 h-14 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-5"></div>
-    <p class="text-sm text-gray-400 font-medium">Loading fee dashboard…</p>
-  </div>
-
-  <!-- ═══════════════════ DASHBOARD CONTENT ═══════════════════ -->
-  <div *ngIf="selectedClassId && !loading" class="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-
-    <!-- ─── SUMMARY CARDS ─── -->
-    <div *ngIf="summary" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-
-      <!-- Total Billed -->
-      <div class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
-            <span class="text-lg">📋</span>
-          </div>
-          <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Billed</span>
-        </div>
-        <p class="text-2xl font-extrabold text-gray-900">{{ formatCurrency(summary.total_billed) }}</p>
-        <p class="text-xs text-gray-400 mt-1">{{ selectedClassName }} · this term</p>
-      </div>
-
-      <!-- Collected — GREEN -->
-      <div class="bg-emerald-50 rounded-2xl border border-emerald-200 p-5 shadow-sm">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-            <span class="text-lg">✅</span>
-          </div>
-          <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Collected</span>
-        </div>
-        <p class="text-2xl font-extrabold text-emerald-800">{{ formatCurrency(summary.total_collected) }}</p>
-        <div class="flex items-center gap-2 mt-2">
-          <div class="flex-1 h-2 rounded-full bg-emerald-200 overflow-hidden">
-            <div class="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                 [style.width.%]="collectionRate"></div>
-          </div>
-          <span class="text-xs font-bold text-emerald-600">{{ collectionRate }}%</span>
-        </div>
-      </div>
-
-      <!-- Pending — AMBER -->
-      <div class="bg-amber-50 rounded-2xl border border-amber-200 p-5 shadow-sm">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-            <span class="text-lg">⏳</span>
-          </div>
-          <span class="text-xs font-bold text-amber-600 uppercase tracking-wider">Pending</span>
-        </div>
-        <p class="text-2xl font-extrabold text-amber-800">{{ formatCurrency(summary.total_outstanding) }}</p>
-        <p class="text-xs text-amber-500 mt-1 font-semibold">
-          {{ summary.by_status['pending'] || 0 }} pending · {{ summary.by_status['partially_paid'] || 0 }} partial
-        </p>
-      </div>
-
-      <!-- Overdue — RED -->
-      <div class="bg-red-50 rounded-2xl border border-red-200 p-5 shadow-sm">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-            <span class="text-lg">🚨</span>
-          </div>
-          <span class="text-xs font-bold text-red-600 uppercase tracking-wider">Overdue</span>
-        </div>
-        <p class="text-2xl font-extrabold text-red-800">{{ summary.by_status['overdue'] || 0 }} student(s)</p>
-        <p class="text-xs text-red-500 mt-1 font-semibold">
-          {{ formatCurrency(summary.total_discount) }} in discounts applied
-        </p>
-      </div>
-    </div>
-
-    <!-- ─── DEFAULTER LIST ─── -->
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-
-      <!-- Header -->
-      <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-        <div>
-          <h2 class="text-lg font-bold text-gray-900">
-            Pending & Overdue Fees
-          </h2>
-          <p class="text-xs text-gray-400 mt-0.5">
-            {{ defaultersReport?.count || 0 }} students · {{ formatCurrency(defaultersReport?.total_outstanding || 0) }} outstanding
-          </p>
-        </div>
-        <button (click)="loadDashboard()"
-                class="px-3 py-1.5 rounded-lg bg-gray-50 text-gray-500 text-xs font-bold
-                       hover:bg-gray-100 transition border border-gray-200">
-          ↻ Refresh
-        </button>
-      </div>
-
-      <!-- Empty state -->
-      <div *ngIf="defaultersReport && defaultersReport.defaulters.length === 0"
-           class="px-6 py-16 text-center">
-        <div class="w-20 h-20 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-4">
-          <span class="text-4xl">🎉</span>
-        </div>
-        <h3 class="text-lg font-bold text-gray-900 mb-1">All fees collected!</h3>
-        <p class="text-sm text-gray-400">No pending or overdue fees for {{ selectedClassName }}.</p>
-      </div>
-
-      <!-- Defaulter rows -->
-      <div *ngIf="defaultersReport && defaultersReport.defaulters.length > 0">
-
-        <!-- Desktop table header -->
-        <div class="hidden sm:grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 text-xs font-bold
-                    text-gray-400 uppercase tracking-wider border-b border-gray-100">
-          <div class="col-span-4">Student</div>
-          <div class="col-span-2 text-right">Pending Amt</div>
-          <div class="col-span-2 text-center">Status</div>
-          <div class="col-span-2 text-center">Due Date</div>
-          <div class="col-span-2 text-right">Actions</div>
-        </div>
-
-        <!-- Student group -->
-        <div *ngFor="let defaulter of defaultersReport!.defaulters; let last = last"
-             class="border-b last:border-b-0"
-             [class.border-gray-50]="!last">
-
-          <!-- Student header row -->
-          <div class="px-6 py-3 bg-gray-50/50 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500
-                          flex items-center justify-center text-white text-xs font-bold">
-                {{ defaulter.student_name.charAt(0) }}
-              </div>
-              <div>
-                <p class="text-sm font-bold text-gray-900">{{ defaulter.student_name }}</p>
-                <p class="text-[11px] text-gray-400">Roll #{{ defaulter.roll_number }}</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-extrabold"
-                    [class.text-red-600]="defaulter.total_due > 0"
-                    [class.text-gray-600]="defaulter.total_due === 0">
-                {{ formatCurrency(defaulter.total_due) }} due
-              </span>
-              <button (click)="sendReminder(defaulter)"
-                      [disabled]="sendingReminder.has(defaulter.enrollment_id) || reminderSent.has(defaulter.enrollment_id)"
-                      class="ml-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
-                             disabled:opacity-50 disabled:cursor-not-allowed"
-                      [ngClass]="reminderSent.has(defaulter.enrollment_id)
-                        ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200'">
-                <span *ngIf="sendingReminder.has(defaulter.enrollment_id)">Sending…</span>
-                <span *ngIf="reminderSent.has(defaulter.enrollment_id)">✅ Sent</span>
-                <span *ngIf="!sendingReminder.has(defaulter.enrollment_id) && !reminderSent.has(defaulter.enrollment_id)">
-                  ✉️ Send Reminder
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Fee line items -->
-          <div *ngFor="let fee of defaulter.fees"
-               class="px-6 py-3 grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-4 items-center
-                      hover:bg-gray-50/60 transition-colors">
-
-            <!-- Description (mobile: full row) -->
-            <div class="sm:col-span-4">
-              <p class="text-sm font-semibold text-gray-700">{{ fee.description }}</p>
-              <p *ngIf="fee.discount_amount > 0" class="text-[11px] text-indigo-500 font-medium mt-0.5">
-                💎 {{ fee.discount_reason || 'Discount' }}: -{{ formatCurrency(fee.discount_amount) }}
-              </p>
-            </div>
-
-            <!-- Amount -->
-            <div class="sm:col-span-2 sm:text-right">
-              <p class="text-sm font-extrabold text-gray-900">{{ formatCurrency(fee.final_amount) }}</p>
-              <p *ngIf="fee.paid_amount > 0" class="text-[11px] text-emerald-500 font-bold">
-                Paid: {{ formatCurrency(fee.paid_amount) }}
-              </p>
-            </div>
-
-            <!-- Status badge -->
-            <div class="sm:col-span-2 sm:text-center">
-              <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border"
-                    [ngClass]="statusColor(fee.status)">
-                {{ statusLabel(fee.status) }}
-              </span>
-            </div>
-
-            <!-- Due date -->
-            <div class="sm:col-span-2 sm:text-center">
-              <span class="text-sm font-medium"
-                    [class.text-red-600]="isOverdue(fee.due_date)"
-                    [class.text-gray-500]="!isOverdue(fee.due_date)">
-                {{ fee.due_date | date:'mediumDate' }}
-              </span>
-              <span *ngIf="isOverdue(fee.due_date)" class="text-[10px] text-red-500 font-bold ml-1">OVERDUE</span>
-            </div>
-
-            <!-- Record payment button -->
-            <div class="sm:col-span-2 sm:text-right">
-              <button (click)="openPaymentModal(fee, defaulter.student_name)"
-                      class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold
-                             hover:bg-emerald-700 transition shadow-md shadow-emerald-200
-                             active:scale-95">
-                💳 Record Payment
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════ PAYMENT MODAL ═══════════════════ -->
-  <div *ngIf="showPaymentModal"
-       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
-
-      <!-- Modal header -->
-      <div class="bg-gradient-to-r from-emerald-600 to-green-600 px-6 py-4 text-white">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-extrabold">Record Payment</h3>
-            <p class="text-emerald-100 text-xs mt-0.5">{{ paymentStudentName }}</p>
-          </div>
-          <button (click)="closePaymentModal()"
-                  class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center
-                         hover:bg-white/30 transition text-white font-bold">
-            ×
+        <!-- Structures controls -->
+        <div *ngIf="activeTab === 'structures'" class="flex items-center gap-2">
+          <select [(ngModel)]="selectedYearId" (ngModelChange)="onYearChange()"
+                  class="flex-1 sm:flex-none px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-medium
+                         text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm"
+                  [disabled]="loadingYears">
+            <option value="">Select Year</option>
+            <option *ngFor="let y of academicYears" [value]="y.id">
+              {{ y.year }}{{ y.is_active ? ' (Active)' : '' }}
+            </option>
+          </select>
+          <button *ngIf="selectedYearId" (click)="openCreateModal()"
+                  class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold
+                         hover:bg-indigo-700 transition shadow-sm active:scale-[0.98] whitespace-nowrap">
+            + Add Structure
           </button>
         </div>
       </div>
 
-      <!-- Modal body -->
-      <div class="px-6 py-5 space-y-4">
+      <!-- ─── TAB BAR ─── -->
+      <div class="flex gap-1 mt-3 -mb-[1px]">
+        <button (click)="switchTab('dashboard')"
+                class="px-3 sm:px-4 py-2 text-xs font-semibold rounded-t-lg border border-b-0 transition-all"
+                [ngClass]="activeTab === 'dashboard'
+                  ? 'bg-gray-50 text-indigo-700 border-gray-200'
+                  : 'bg-white text-gray-400 border-transparent hover:text-gray-600'">
+          💰 Collections
+        </button>
+        <button (click)="switchTab('structures')"
+                class="px-3 sm:px-4 py-2 text-xs font-semibold rounded-t-lg border border-b-0 transition-all"
+                [ngClass]="activeTab === 'structures'
+                  ? 'bg-gray-50 text-indigo-700 border-gray-200'
+                  : 'bg-white text-gray-400 border-transparent hover:text-gray-600'">
+          📋 Fee Structures
+        </button>
+      </div>
+    </div>
+  </div>
 
-        <!-- Fee info -->
-        <div class="bg-gray-50 rounded-xl p-4">
-          <p class="text-sm font-semibold text-gray-700">{{ paymentFee?.description }}</p>
-          <div class="flex justify-between mt-2 text-xs">
-            <span class="text-gray-400">Invoice total</span>
-            <span class="font-bold text-gray-700">{{ formatCurrency(paymentFee?.final_amount || 0) }}</span>
+  <!-- ─── TOASTS ─── -->
+  <div *ngIf="successMessage" class="max-w-6xl mx-auto px-3 sm:px-6 pt-3">
+    <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 flex items-center justify-between">
+      <span class="text-emerald-800 font-medium text-xs">✅ {{ successMessage }}</span>
+      <button (click)="successMessage = ''" class="text-emerald-400 hover:text-emerald-600 text-sm font-bold ml-2">×</button>
+    </div>
+  </div>
+  <div *ngIf="errorMessage" class="max-w-6xl mx-auto px-3 sm:px-6 pt-3">
+    <div class="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 flex items-center justify-between">
+      <span class="text-red-800 font-medium text-xs">⚠️ {{ errorMessage }}</span>
+      <button (click)="errorMessage = ''" class="text-red-400 hover:text-red-600 text-sm font-bold ml-2">×</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════ TAB: COLLECTIONS DASHBOARD ═══════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeTab === 'dashboard'">
+
+    <!-- No class selected -->
+    <div *ngIf="!selectedClassId && !loadingClasses" class="max-w-6xl mx-auto px-3 sm:px-6 py-14 sm:py-20 text-center">
+      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+        <span class="text-3xl sm:text-4xl">💰</span>
+      </div>
+      <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1.5">Select a class to get started</h3>
+      <p class="text-gray-400 text-xs max-w-xs mx-auto">
+        Choose a class from the dropdown to view fee collection summary, defaulters, and manage payments.
+      </p>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="max-w-6xl mx-auto px-3 sm:px-6 py-14 text-center">
+      <div class="w-10 h-10 border-[3px] border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-xs text-gray-400 font-medium">Loading fee dashboard…</p>
+    </div>
+
+    <!-- Dashboard content -->
+    <div *ngIf="selectedClassId && !loading" class="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
+
+      <!-- Summary cards -->
+      <div *ngIf="summary" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
+        <div class="bg-white rounded-xl border border-gray-100 p-3 sm:p-4 shadow-sm">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center"><span class="text-sm">📋</span></div>
+            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Billed</span>
           </div>
-          <div class="flex justify-between mt-1 text-xs">
-            <span class="text-gray-400">Already paid</span>
-            <span class="font-bold text-emerald-600">{{ formatCurrency(paymentFee?.paid_amount || 0) }}</span>
+          <p class="text-lg sm:text-xl font-bold text-gray-900">{{ formatCurrency(summary.total_billed) }}</p>
+          <p class="text-[10px] text-gray-400 mt-0.5">{{ selectedClassName }} · this term</p>
+        </div>
+        <div class="bg-emerald-50 rounded-xl border border-emerald-200 p-3 sm:p-4 shadow-sm">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center"><span class="text-sm">✅</span></div>
+            <span class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Collected</span>
           </div>
-          <div class="border-t border-gray-200 mt-2 pt-2 flex justify-between text-sm">
-            <span class="font-bold text-gray-500">Remaining</span>
-            <span class="font-extrabold text-red-600">{{ formatCurrency(remainingBalance) }}</span>
+          <p class="text-lg sm:text-xl font-bold text-emerald-800">{{ formatCurrency(summary.total_collected) }}</p>
+          <div class="flex items-center gap-1.5 mt-1.5">
+            <div class="flex-1 h-1.5 rounded-full bg-emerald-200 overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full transition-all duration-500" [style.width.%]="collectionRate"></div>
+            </div>
+            <span class="text-[10px] font-bold text-emerald-600">{{ collectionRate }}%</span>
           </div>
         </div>
+        <div class="bg-amber-50 rounded-xl border border-amber-200 p-3 sm:p-4 shadow-sm">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center"><span class="text-sm">⏳</span></div>
+            <span class="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Pending</span>
+          </div>
+          <p class="text-lg sm:text-xl font-bold text-amber-800">{{ formatCurrency(summary.total_outstanding) }}</p>
+          <p class="text-[10px] text-amber-500 mt-0.5 font-medium">
+            {{ summary.by_status['pending'] || 0 }} pending · {{ summary.by_status['partially_paid'] || 0 }} partial
+          </p>
+        </div>
+        <div class="bg-red-50 rounded-xl border border-red-200 p-3 sm:p-4 shadow-sm">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center"><span class="text-sm">🚨</span></div>
+            <span class="text-[10px] font-bold text-red-600 uppercase tracking-wider">Overdue</span>
+          </div>
+          <p class="text-lg sm:text-xl font-bold text-red-800">{{ summary.by_status['overdue'] || 0 }} student(s)</p>
+          <p class="text-[10px] text-red-500 mt-0.5 font-medium">{{ formatCurrency(summary.total_discount) }} in discounts applied</p>
+        </div>
+      </div>
 
-        <!-- Payment amount -->
+      <!-- Defaulter list -->
+      <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div class="px-4 sm:px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-gray-900">Pending & Overdue Fees</h2>
+            <p class="text-[10px] text-gray-400 mt-0.5">
+              {{ defaultersReport?.count || 0 }} students · {{ formatCurrency(defaultersReport?.total_outstanding || 0) }} outstanding
+            </p>
+          </div>
+          <button (click)="loadDashboard()"
+                  class="px-2.5 py-1 rounded-md bg-gray-50 text-gray-500 text-[10px] font-semibold hover:bg-gray-100 transition border border-gray-200">
+            ↻ Refresh
+          </button>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="defaultersReport && defaultersReport.defaulters.length === 0" class="px-4 py-12 text-center">
+          <div class="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+            <span class="text-2xl">🎉</span>
+          </div>
+          <h3 class="text-sm font-bold text-gray-900 mb-1">All fees collected!</h3>
+          <p class="text-xs text-gray-400">No pending or overdue fees for {{ selectedClassName }}.</p>
+        </div>
+
+        <!-- Defaulter rows -->
+        <div *ngIf="defaultersReport && defaultersReport.defaulters.length > 0">
+          <div class="hidden sm:grid grid-cols-12 gap-3 px-4 sm:px-5 py-2 bg-gray-50 text-[10px] font-bold
+                      text-gray-400 uppercase tracking-wider border-b border-gray-100">
+            <div class="col-span-4">Student</div>
+            <div class="col-span-2 text-right">Pending Amt</div>
+            <div class="col-span-2 text-center">Status</div>
+            <div class="col-span-2 text-center">Due Date</div>
+            <div class="col-span-2 text-right">Actions</div>
+          </div>
+
+          <div *ngFor="let defaulter of defaultersReport!.defaulters; let last = last"
+               class="border-b last:border-b-0" [class.border-gray-50]="!last">
+            <div class="px-4 sm:px-5 py-2.5 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-0">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500
+                            flex items-center justify-center text-white text-[10px] font-bold">
+                  {{ defaulter.student_name.charAt(0) }}
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-gray-900">{{ defaulter.student_name }}</p>
+                  <p class="text-[10px] text-gray-400">Roll #{{ defaulter.roll_number }}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 ml-9 sm:ml-0">
+                <span class="text-xs font-bold"
+                      [class.text-red-600]="defaulter.total_due > 0"
+                      [class.text-gray-600]="defaulter.total_due === 0">
+                  {{ formatCurrency(defaulter.total_due) }} due
+                </span>
+                <button (click)="sendReminder(defaulter)"
+                        [disabled]="sendingReminder.has(defaulter.enrollment_id) || reminderSent.has(defaulter.enrollment_id)"
+                        class="px-2.5 py-1 rounded-md text-[10px] font-semibold transition-all
+                               disabled:opacity-50 disabled:cursor-not-allowed"
+                        [ngClass]="reminderSent.has(defaulter.enrollment_id)
+                          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                          : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'">
+                  <span *ngIf="sendingReminder.has(defaulter.enrollment_id)">Sending…</span>
+                  <span *ngIf="reminderSent.has(defaulter.enrollment_id)">✅ Sent</span>
+                  <span *ngIf="!sendingReminder.has(defaulter.enrollment_id) && !reminderSent.has(defaulter.enrollment_id)">
+                    ✉️ Remind
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div *ngFor="let fee of defaulter.fees"
+                 class="px-4 sm:px-5 py-2 grid grid-cols-1 sm:grid-cols-12 gap-1.5 sm:gap-3 items-center hover:bg-gray-50/60 transition-colors">
+              <div class="sm:col-span-4">
+                <p class="text-xs font-medium text-gray-700">{{ fee.description }}</p>
+                <p *ngIf="fee.discount_amount > 0" class="text-[10px] text-indigo-500 font-medium mt-0.5">
+                  💎 {{ fee.discount_reason || 'Discount' }}: -{{ formatCurrency(fee.discount_amount) }}
+                </p>
+              </div>
+              <div class="sm:col-span-2 sm:text-right">
+                <p class="text-xs font-bold text-gray-900">{{ formatCurrency(fee.final_amount) }}</p>
+                <p *ngIf="fee.paid_amount > 0" class="text-[10px] text-emerald-500 font-semibold">Paid: {{ formatCurrency(fee.paid_amount) }}</p>
+              </div>
+              <div class="sm:col-span-2 sm:text-center">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border" [ngClass]="statusColor(fee.status)">
+                  {{ statusLabel(fee.status) }}
+                </span>
+              </div>
+              <div class="sm:col-span-2 sm:text-center">
+                <span class="text-xs font-medium" [class.text-red-600]="isOverdue(fee.due_date)" [class.text-gray-500]="!isOverdue(fee.due_date)">
+                  {{ fee.due_date | date:'mediumDate' }}
+                </span>
+                <span *ngIf="isOverdue(fee.due_date)" class="text-[9px] text-red-500 font-bold ml-1">OVERDUE</span>
+              </div>
+              <div class="sm:col-span-2 sm:text-right">
+                <button (click)="openPaymentModal(fee, defaulter.student_name)"
+                        class="px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white text-[10px] font-semibold
+                               hover:bg-emerald-700 transition shadow-sm active:scale-95">
+                  💳 Record Payment
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- ═══════════════ TAB: FEE STRUCTURES ═══════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeTab === 'structures'">
+
+    <!-- No year selected -->
+    <div *ngIf="!selectedYearId && !loadingYears" class="max-w-6xl mx-auto px-3 sm:px-6 py-14 sm:py-20 text-center">
+      <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+        <span class="text-3xl sm:text-4xl">📝</span>
+      </div>
+      <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1.5">Select an academic year</h3>
+      <p class="text-gray-400 text-xs max-w-xs mx-auto">Choose an academic year to view and manage fee structures.</p>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="loadingStructures" class="max-w-6xl mx-auto px-3 sm:px-6 py-14 text-center">
+      <div class="w-10 h-10 border-[3px] border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="text-xs text-gray-400 font-medium">Loading fee structures…</p>
+    </div>
+
+    <!-- Structures content -->
+    <div *ngIf="selectedYearId && !loadingStructures" class="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
+
+      <!-- Summary bar -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white rounded-xl border border-gray-100 p-3 sm:p-4 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center"><span class="text-lg">📋</span></div>
+          <div>
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{{ selectedYearLabel }}</p>
+            <p class="text-lg sm:text-xl font-bold text-gray-900">{{ structures.length }} fee structure{{ structures.length !== 1 ? 's' : '' }}</p>
+          </div>
+        </div>
+        <div class="text-left sm:text-right ml-12 sm:ml-0">
+          <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Total Base Amount</p>
+          <p class="text-lg sm:text-xl font-bold text-indigo-600">{{ formatCurrency(totalStructureAmount) }}</p>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="structures.length === 0" class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-12 text-center">
+        <div class="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-3">
+          <span class="text-2xl">📭</span>
+        </div>
+        <h3 class="text-sm font-bold text-gray-900 mb-1">No fee structures yet</h3>
+        <p class="text-xs text-gray-400 mb-3">Add your first fee structure for {{ selectedYearLabel }}.</p>
+        <button (click)="openCreateModal()"
+                class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold
+                       hover:bg-indigo-700 transition shadow-sm">
+          + Create Fee Structure
+        </button>
+      </div>
+
+      <!-- Structure cards -->
+      <div *ngIf="structures.length > 0" class="space-y-2.5">
+        <div *ngFor="let s of structures"
+             class="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <div class="px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-400 to-violet-500
+                          flex items-center justify-center text-white text-sm font-bold shrink-0">
+                {{ s.name.charAt(0) }}
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-bold text-gray-900 truncate">{{ s.name }}</p>
+                <p *ngIf="s.description" class="text-[10px] text-gray-400 mt-0.5 truncate">{{ s.description }}</p>
+                <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+                        [ngClass]="frequencyColor(s.frequency)">
+                    {{ frequencyLabel(s.frequency) }}
+                  </span>
+                  <span *ngIf="className(s.class_id)"
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border text-indigo-700 bg-indigo-50 border-indigo-200">
+                    {{ className(s.class_id) }}
+                  </span>
+                  <span class="text-[10px] text-gray-400">Due: {{ s.due_date | date:'mediumDate' }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 ml-12 sm:ml-0">
+              <p class="text-base sm:text-lg font-bold text-gray-900">{{ formatCurrency(s.amount) }}</p>
+              <button (click)="confirmDelete(s)"
+                      class="p-1.5 rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition" title="Delete">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ═══════════════ PAYMENT MODAL ═══════════════ -->
+  <div *ngIf="showPaymentModal"
+       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div class="bg-gradient-to-r from-emerald-600 to-green-600 px-4 sm:px-5 py-3 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold">Record Payment</h3>
+            <p class="text-emerald-100 text-[10px] mt-0.5">{{ paymentStudentName }}</p>
+          </div>
+          <button (click)="closePaymentModal()"
+                  class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition text-white text-sm font-bold">×</button>
+        </div>
+      </div>
+      <div class="px-4 sm:px-5 py-4 space-y-3">
+        <div class="bg-gray-50 rounded-lg p-3">
+          <p class="text-xs font-medium text-gray-700">{{ paymentFee?.description }}</p>
+          <div class="flex justify-between mt-1.5 text-[10px]">
+            <span class="text-gray-400">Invoice total</span>
+            <span class="font-semibold text-gray-700">{{ formatCurrency(paymentFee?.final_amount || 0) }}</span>
+          </div>
+          <div class="flex justify-between mt-1 text-[10px]">
+            <span class="text-gray-400">Already paid</span>
+            <span class="font-semibold text-emerald-600">{{ formatCurrency(paymentFee?.paid_amount || 0) }}</span>
+          </div>
+          <div class="border-t border-gray-200 mt-1.5 pt-1.5 flex justify-between text-xs">
+            <span class="font-semibold text-gray-500">Remaining</span>
+            <span class="font-bold text-red-600">{{ formatCurrency(remainingBalance) }}</span>
+          </div>
+        </div>
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-            Payment Amount (₹)
-          </label>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Payment Amount (₹)</label>
           <div class="flex gap-2">
-            <input type="number" [(ngModel)]="paymentAmount"
-                   [max]="remainingBalance" min="1" step="0.01"
-                   placeholder="Enter amount"
-                   class="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm font-semibold
-                          focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
+            <input type="number" [(ngModel)]="paymentAmount" [max]="remainingBalance" min="1" step="0.01" placeholder="Enter amount"
+                   class="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
             <button (click)="payFull()"
-                    class="px-4 py-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold
-                           hover:bg-emerald-100 transition border border-emerald-200 whitespace-nowrap">
+                    class="px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-semibold hover:bg-emerald-100 transition border border-emerald-200 whitespace-nowrap">
               Pay Full
             </button>
           </div>
         </div>
-
-        <!-- Payment method -->
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-            Payment Method
-          </label>
-          <div class="grid grid-cols-4 gap-2">
+          <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Payment Method</label>
+          <div class="grid grid-cols-4 gap-1.5">
             <button *ngFor="let method of ['cash', 'upi', 'bank_transfer', 'cheque']"
                     (click)="paymentMethod = method"
-                    class="py-2.5 rounded-xl text-xs font-bold border transition-all text-center"
+                    class="py-2 rounded-lg text-[10px] font-semibold border transition-all text-center"
                     [ngClass]="paymentMethod === method
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-200'
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
                       : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-300'">
-              {{ method === 'bank_transfer' ? 'Bank' :
-                 method === 'upi' ? 'UPI' :
-                 method === 'cheque' ? 'Cheque' : 'Cash' }}
+              {{ method === 'bank_transfer' ? 'Bank' : method === 'upi' ? 'UPI' : method === 'cheque' ? 'Cheque' : 'Cash' }}
             </button>
           </div>
         </div>
-
-        <!-- Reference number -->
         <div>
-          <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-            Reference / Transaction ID
-            <span class="text-gray-300 font-normal normal-case">(optional)</span>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+            Reference / Transaction ID <span class="text-gray-300 font-normal normal-case">(optional)</span>
           </label>
-          <input type="text" [(ngModel)]="paymentReference"
-                 placeholder="UPI ref, cheque no, etc."
-                 class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm
-                        focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
+          <input type="text" [(ngModel)]="paymentReference" placeholder="UPI ref, cheque no, etc."
+                 class="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
         </div>
       </div>
-
-      <!-- Modal footer -->
-      <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex gap-3">
+      <div class="px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-100 flex gap-2">
         <button (click)="closePaymentModal()"
-                class="flex-1 py-3 rounded-xl bg-white text-gray-600 text-sm font-bold
-                       border border-gray-200 hover:bg-gray-100 transition">
-          Cancel
-        </button>
-        <button (click)="submitPayment()"
-                [disabled]="paymentProcessing || !paymentAmount"
-                class="flex-1 py-3 rounded-xl bg-emerald-600 text-white text-sm font-extrabold
-                       hover:bg-emerald-700 transition shadow-lg shadow-emerald-200
+                class="flex-1 py-2.5 rounded-lg bg-white text-gray-600 text-xs font-semibold border border-gray-200 hover:bg-gray-100 transition">Cancel</button>
+        <button (click)="submitPayment()" [disabled]="paymentProcessing || !paymentAmount"
+                class="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition shadow-sm
                        disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]">
           <span *ngIf="paymentProcessing">Processing…</span>
-          <span *ngIf="!paymentProcessing">
-            Confirm {{ paymentAmount ? formatCurrency(+paymentAmount) : '' }} Payment
-          </span>
+          <span *ngIf="!paymentProcessing">Confirm {{ paymentAmount ? formatCurrency(+paymentAmount) : '' }} Payment</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CREATE STRUCTURE MODAL ═══════════════ -->
+  <div *ngIf="showCreateModal"
+       class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-0 sm:px-4">
+    <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div class="bg-gradient-to-r from-indigo-600 to-violet-600 px-4 sm:px-5 py-3 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold">New Fee Structure</h3>
+            <p class="text-indigo-200 text-[10px] mt-0.5">{{ selectedYearLabel }}</p>
+          </div>
+          <button (click)="closeCreateModal()"
+                  class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition text-white text-sm font-bold">×</button>
+        </div>
+      </div>
+      <div class="px-4 sm:px-5 py-4 space-y-3">
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Class *</label>
+          <select [(ngModel)]="createForm.class_id"
+                  class="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select Class</option>
+            <option *ngFor="let cls of classes" [value]="cls.id">{{ cls.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Fee Name *</label>
+          <input type="text" [(ngModel)]="createForm.name" maxlength="150" placeholder="e.g. Term 1 Tuition, Activity Fee"
+                 class="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+            Description <span class="text-gray-300 font-normal normal-case">(optional)</span>
+          </label>
+          <input type="text" [(ngModel)]="createForm.description" placeholder="Brief description"
+                 class="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Amount (₹) *</label>
+            <input type="number" [(ngModel)]="createForm.amount" min="1" step="0.01" placeholder="0.00"
+                   class="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Due Date *</label>
+            <input type="date" [(ngModel)]="createForm.due_date"
+                   class="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Frequency</label>
+          <div class="grid grid-cols-4 gap-1.5">
+            <button *ngFor="let freq of ['one_time', 'monthly', 'quarterly', 'yearly']"
+                    (click)="createForm.frequency = $any(freq)"
+                    class="py-2 rounded-lg text-[10px] font-semibold border transition-all text-center"
+                    [ngClass]="createForm.frequency === freq
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'">
+              {{ frequencyLabel(freq) }}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-100 flex gap-2">
+        <button (click)="closeCreateModal()"
+                class="flex-1 py-2.5 rounded-lg bg-white text-gray-600 text-xs font-semibold border border-gray-200 hover:bg-gray-100 transition">Cancel</button>
+        <button (click)="submitCreate()"
+                [disabled]="creating || !createForm.name || !createForm.amount || !createForm.due_date || !createForm.class_id"
+                class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition shadow-sm
+                       disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]">
+          <span *ngIf="creating">Creating…</span>
+          <span *ngIf="!creating">Create Structure</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DELETE CONFIRMATION ═══════════════ -->
+  <div *ngIf="deleteTarget"
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden">
+      <div class="px-5 py-5 text-center">
+        <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
+          <span class="text-xl">🗑️</span>
+        </div>
+        <h3 class="text-sm font-bold text-gray-900 mb-1.5">Delete Fee Structure?</h3>
+        <p class="text-xs text-gray-500">
+          Are you sure you want to delete <strong>{{ deleteTarget.name }}</strong>? This cannot be undone.
+        </p>
+      </div>
+      <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex gap-2">
+        <button (click)="cancelDelete()"
+                class="flex-1 py-2.5 rounded-lg bg-white text-gray-600 text-xs font-semibold border border-gray-200 hover:bg-gray-100 transition">Cancel</button>
+        <button (click)="executeDelete()" [disabled]="deleting"
+                class="flex-1 py-2.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition shadow-sm
+                       disabled:opacity-50 disabled:cursor-not-allowed">
+          <span *ngIf="deleting">Deleting…</span>
+          <span *ngIf="!deleting">Delete</span>
         </button>
       </div>
     </div>

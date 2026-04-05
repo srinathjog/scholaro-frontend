@@ -136,9 +136,7 @@ export class ResetPasswordComponent implements OnInit {
     this.loading = true;
     const { schoolCode, newPassword } = this.form.value;
 
-    this.tenantService.setTenantId(schoolCode);
-
-    this.authService.completePasswordReset(this.token, newPassword).subscribe({
+    this.authService.completePasswordReset(this.token, newPassword, schoolCode).subscribe({
       next: (res) => {
         this.loading = false;
         this.successMessage = res.message || 'Password has been reset successfully.';

@@ -30,7 +30,7 @@ export class PushNotificationService {
       if (!publicKey) return false;
 
       // 2. Ask browser for push permission + create subscription
-      const sub = await this.swPush.requestSubscription({
+      const sub = await this.swPush!.requestSubscription({
         serverPublicKey: publicKey,
       });
 
