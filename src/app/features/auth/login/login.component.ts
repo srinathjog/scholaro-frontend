@@ -56,7 +56,7 @@ export class LoginComponent {
     }
     this.loading = true;
     const { email, password, schoolCode } = this.loginForm.value;
-    const tenantId = this.isSuperAdmin ? '' : schoolCode;
+    const tenantId = this.isSuperAdmin ? '' : (schoolCode || '').trim();
     this.authService.login(email, password, tenantId).subscribe({
       next: (user: any) => {
         this.loading = false;
@@ -73,9 +73,10 @@ export class LoginComponent {
           this.router.navigate(['/']);
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.loading = false;
-        this.errorMessage = 'Invalid Credentials';
+        this.errorMessage = err?.error?.message || err?.message || 'Invalid Credentials';
+        console.error('Login error:', err);
         this.cdr.markForCheck();
       }
     });
