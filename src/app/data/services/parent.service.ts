@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, map, of, catchError, shareReplay, tap } from 'rxjs';
+import { Observable, forkJoin, map, of, catchError, shareReplay, tap, concat, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Activity } from './activity.service';
 import { DailyLog, LogCategory } from './daily-log.service';
@@ -53,27 +53,60 @@ export interface ParentChild {
 export class ParentService {
   private readonly apiUrl = environment.apiUrl;
 
-  // Cached observables
+  // ── In-memory caches (stale-while-revalidate) ──
+  private childrenData: ParentChild[] | null = null;
   private children$: Observable<ParentChild[]> | null = null;
-  private timelineCache = new Map<string, { data: TimelineItem[]; ts: number }>();
-  private readonly TIMELINE_TTL = 60_000; // 1 minute cache
+  private timelineData = new Map<string, TimelineItem[]>();
+  private feesData = new Map<string, { fees: any[]; summary: any }>();
 
   constructor(private http: HttpClient) {}
 
-  /** Get children — cached, shared across components. Call clearCache() on logout. */
+  /**
+   * Get children — instant from cache, background-refresh for next visit.
+   * First call fetches from API; subsequent calls return cached data immediately
+   * and silently refresh in the background.
+   */
   getMyChildren(): Observable<ParentChild[]> {
+    // If we have cached data, return it instantly + refresh in background
+    if (this.childrenData) {
+      const cached$ = of(this.childrenData);
+      // Background refresh (won't block the UI)
+      this.fetchChildren$().subscribe();
+      return cached$;
+    }
+
+    // First load — fetch and cache
     if (!this.children$) {
-      this.children$ = this.http
-        .get<ParentChild[]>(`${this.apiUrl}/parents/me/children`)
-        .pipe(shareReplay(1));
+      this.children$ = this.fetchChildren$().pipe(shareReplay(1));
     }
     return this.children$;
   }
 
-  /** Clear all caches (call on logout or child data change) */
+  private fetchChildren$(): Observable<ParentChild[]> {
+    return this.http
+      .get<ParentChild[]>(`${this.apiUrl}/parents/me/children`)
+      .pipe(tap((data) => { this.childrenData = data; this.children$ = null; }));
+  }
+
+  /** Get fees — instant from cache, background-refresh */
+  getStudentFees(studentId: string): Observable<{ fees: any[]; summary: any }> {
+    const cached = this.feesData.get(studentId);
+    if (cached) {
+      // Return cached + background refresh
+      this.http.get<any>(`${this.apiUrl}/parents/student/${studentId}/fees`)
+        .subscribe((fresh) => this.feesData.set(studentId, fresh));
+      return of(cached);
+    }
+    return this.http.get<any>(`${this.apiUrl}/parents/student/${studentId}/fees`)
+      .pipe(tap((data) => this.feesData.set(studentId, data)));
+  }
+
+  /** Clear all caches (call on logout) */
   clearCache(): void {
+    this.childrenData = null;
     this.children$ = null;
-    this.timelineCache.clear();
+    this.timelineData.clear();
+    this.feesData.clear();
   }
 
   /**
@@ -93,10 +126,38 @@ export class ParentService {
   ): Observable<TimelineItem[]> {
     const d = date || new Date().toISOString().slice(0, 10);
     const cacheKey = `${enrollmentId}_${classId}_${d}_${studentId || ''}`;
-    const cached = this.timelineCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < this.TIMELINE_TTL) {
-      return of(cached.data);
+    const cached = this.timelineData.get(cacheKey);
+
+    const fresh$ = this.fetchTimeline$(enrollmentId, classId, d, studentId, cacheKey);
+
+    if (cached) {
+      // Return cached instantly, refresh in background for next visit
+      fresh$.subscribe();
+      return of(cached);
     }
+
+    return fresh$;
+  }
+
+  /** Force-refresh timeline (pull-to-refresh) — bypasses cache */
+  refreshTimeline(
+    enrollmentId: string,
+    classId: string,
+    date?: string,
+    studentId?: string,
+  ): Observable<TimelineItem[]> {
+    const d = date || new Date().toISOString().slice(0, 10);
+    const cacheKey = `${enrollmentId}_${classId}_${d}_${studentId || ''}`;
+    return this.fetchTimeline$(enrollmentId, classId, d, studentId, cacheKey);
+  }
+
+  private fetchTimeline$(
+    enrollmentId: string,
+    classId: string,
+    date: string,
+    studentId: string | undefined,
+    cacheKey: string,
+  ): Observable<TimelineItem[]> {
 
     const sources: any = {
       activities: this.http.get<Activity[]>(`${this.apiUrl}/activities/feed`, {
@@ -104,7 +165,7 @@ export class ParentService {
       }),
       logs: this.http.get<DailyLog[]>(
         `${this.apiUrl}/daily-logs/student/${enrollmentId}`,
-        { params: { date: d } },
+        { params: { date } },
       ),
     };
 
@@ -112,7 +173,7 @@ export class ParentService {
     if (studentId) {
       sources.attendance = this.http.get<AttendanceRecord[]>(
         `${this.apiUrl}/parents/student/${studentId}/attendance`,
-        { params: { date: d } },
+        { params: { date } },
       ).pipe(catchError(() => of([] as AttendanceRecord[])));
     }
 
@@ -175,7 +236,7 @@ export class ParentService {
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
       }),
-      tap((items) => this.timelineCache.set(cacheKey, { data: items, ts: Date.now() })),
+      tap((items) => this.timelineData.set(cacheKey, items)),
     );
   }
 }

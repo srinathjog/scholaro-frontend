@@ -1,10 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient } from '@angular/common/http';
 import { ParentService, ParentChild } from '../../../data/services/parent.service';
 import { Fee } from '../../../data/services/fee.service';
-import { environment } from '../../../../environments/environment';
 
 interface FeesSummary {
   total_due: number;
@@ -45,7 +43,6 @@ export class ParentFeesComponent implements OnInit {
 
   constructor(
     private parentService: ParentService,
-    private http: HttpClient,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -80,9 +77,7 @@ export class ParentFeesComponent implements OnInit {
     this.loading = true;
     this.errorMessage = '';
 
-    this.http.get<StudentFeesResponse>(
-      `${environment.apiUrl}/parents/student/${this.selectedChild.id}/fees`,
-    ).subscribe({
+    this.parentService.getStudentFees(this.selectedChild.id).subscribe({
       next: (data) => {
         this.fees = data.fees;
         this.summary = data.summary;

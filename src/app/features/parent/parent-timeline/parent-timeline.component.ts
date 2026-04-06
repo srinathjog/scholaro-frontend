@@ -159,7 +159,20 @@ export class ParentTimelineComponent implements OnInit {
   /** Pull-to-refresh handler */
   refresh(): void {
     this.refreshing = true;
-    this.loadTimeline();
+    if (!this.selectedEnrollmentId || !this.selectedClassId) return;
+    this.parentService
+      .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
+      .subscribe({
+        next: (items) => {
+          this.timeline = items;
+          this.refreshing = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.refreshing = false;
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   /** Navigate to previous day */
