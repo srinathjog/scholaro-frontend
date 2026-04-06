@@ -96,6 +96,19 @@ export class ParentShellComponent implements OnInit {
         this.cdr.detectChanges();
       });
     }
+
+    // ── Eager prefetch: prime caches silently so tab switching is instant ──
+    this.parentService.getMyChildren().subscribe(children => {
+      if (!children?.length) return;
+      const child = children[0];
+      // Pre-fetch fees for the first child
+      this.parentService.getStudentFees(child.id).subscribe();
+      // Pre-fetch today's timeline for the first enrollment
+      if (child.enrollments?.length) {
+        const e = child.enrollments[0];
+        this.parentService.getTimeline(e.id, e.class_id, undefined, child.id).subscribe();
+      }
+    });
   }
 
   async installApp(): Promise<void> {

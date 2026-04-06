@@ -89,7 +89,7 @@ export class ParentTimelineComponent implements OnInit {
 
   /** Step 1: Load parent's children with enrollments */
   private loadChildren(): void {
-    this.loadingChildren = true;
+    this.loadingChildren = this.children.length === 0;
     this.parentService.getMyChildren().subscribe({
       next: (children) => {
         this.children = children;
@@ -135,7 +135,7 @@ export class ParentTimelineComponent implements OnInit {
   loadTimeline(): void {
     if (!this.selectedEnrollmentId || !this.selectedClassId) return;
 
-    this.loading = true;
+    this.loading = this.timeline.length === 0;
     this.errorMessage = '';
 
     this.parentService

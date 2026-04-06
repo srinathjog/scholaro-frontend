@@ -51,7 +51,7 @@ export class ParentFeesComponent implements OnInit {
   }
 
   private loadChildren(): void {
-    this.loadingChildren = true;
+    this.loadingChildren = this.children.length === 0;
     this.parentService.getMyChildren().subscribe({
       next: (children) => {
         this.children = children;
@@ -74,7 +74,7 @@ export class ParentFeesComponent implements OnInit {
 
   loadFees(): void {
     if (!this.selectedChild) return;
-    this.loading = true;
+    this.loading = this.fees.length === 0;
     this.errorMessage = '';
 
     this.parentService.getStudentFees(this.selectedChild.id).subscribe({
