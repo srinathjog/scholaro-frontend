@@ -21,6 +21,7 @@ export class CreateActivityComponent implements OnInit {
   assignments: TeacherAssignment[] = [];
   selectedFiles: File[] = [];
   previews: string[] = [];
+  loadingPreviews = 0;
   submitting = false;
   uploading = false;
   successMessage = '';
@@ -63,10 +64,14 @@ export class CreateActivityComponent implements OnInit {
 
     const newFiles = Array.from(input.files);
     this.selectedFiles.push(...newFiles);
+    this.loadingPreviews += newFiles.length;
 
     for (const file of newFiles) {
       const reader = new FileReader();
-      reader.onload = (e) => this.previews.push(e.target?.result as string);
+      reader.onload = (e) => {
+        this.previews.push(e.target?.result as string);
+        this.loadingPreviews--;
+      };
       reader.readAsDataURL(file);
     }
 
