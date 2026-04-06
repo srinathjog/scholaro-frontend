@@ -114,8 +114,10 @@
   <div *ngIf="selectedChild" class="max-w-lg mx-auto px-4 pb-24">
 
     <!-- ─── HERO STATUS CARD ─── -->
-    <div class="mt-4 mb-5 bg-gradient-to-br from-orange-400 via-rose-400 to-pink-400
-                rounded-3xl p-5 text-white shadow-xl shadow-orange-200/50 relative overflow-hidden">
+    <div class="mt-4 mb-5 rounded-3xl p-5 text-white shadow-xl relative overflow-hidden transition-colors"
+         [ngClass]="isChildAbsent
+           ? 'bg-gradient-to-br from-slate-400 via-gray-400 to-slate-500 shadow-slate-200/50'
+           : 'bg-gradient-to-br from-orange-400 via-rose-400 to-pink-400 shadow-orange-200/50'">
       <!-- Decorative blobs -->
       <div class="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full"></div>
       <div class="absolute -bottom-6 -left-6 w-24 h-24 bg-white/10 rounded-full"></div>
@@ -142,8 +144,8 @@
           {{ dailyStatus }}
         </p>
 
-        <!-- Quick stat bubbles -->
-        <div *ngIf="!loading && (logStats.length || isCheckedIn)" class="flex gap-2 mt-3 flex-wrap">
+        <!-- Quick stat bubbles (hidden when child is absent) -->
+        <div *ngIf="!loading && !isChildAbsent && (logStats.length || isCheckedIn)" class="flex gap-2 mt-3 flex-wrap">
           <!-- Security badge -->
           <span *ngIf="isCheckedIn && !isCheckedOut"
                 class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/25 backdrop-blur-sm
@@ -186,31 +188,41 @@
 
       <div *ngFor="let item of timeline; let i = index">
 
-        <!-- ═══ ACTIVITY / BROADCAST CARD — Instagram-style ═══ -->
+        <!-- ═══ ACTIVITY / BROADCAST CARD — Premium social feed ═══ -->
         <div *ngIf="item.type === 'activity'"
-             class="bg-white rounded-3xl shadow-sm border border-gray-100/80 overflow-hidden">
+             class="bg-white rounded-3xl shadow-md shadow-gray-100/80 border border-gray-100 overflow-hidden">
 
           <!-- Header row -->
-          <div class="flex items-center gap-3 px-4 py-3">
-            <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500
-                        flex items-center justify-center shadow-md shadow-violet-100">
-              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-                <circle cx="12" cy="13" r="3"/>
-              </svg>
+          <div class="flex items-start justify-between px-4 pt-4 pb-3">
+            <!-- Left: Icon + label stack -->
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-xl">
+                {{ getActivityHeader(item).icon }}
+              </div>
+              <div>
+                <p class="text-base font-bold text-gray-800 leading-tight">{{ getActivityHeader(item).label }}</p>
+                <p class="text-xs text-gray-500 mt-0.5">{{ item.className || 'Class Update' }}</p>
+              </div>
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-bold text-gray-900">{{ item.className || 'Class Update' }}</p>
-              <p class="text-[11px] text-gray-400">{{ item.activity_type || 'Activity' }}</p>
+            <!-- Right: Status badge + time -->
+            <div class="flex flex-col items-end gap-1 shrink-0">
+              <span *ngIf="item.is_present !== undefined && item.activity_type !== 'notice'"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide"
+                    [ngClass]="[getStatusConfig(item).bg, getStatusConfig(item).text]">
+                <span class="w-1.5 h-1.5 rounded-full" [ngClass]="getStatusConfig(item).dot"></span>
+                {{ getStatusConfig(item).label }}
+              </span>
+              <span class="text-[10px] text-gray-400 font-medium text-right">
+                {{ item.created_at | date:'shortTime' }}
+              </span>
             </div>
-            <span class="text-[11px] text-gray-400 font-medium">
-              {{ item.created_at | date:'shortTime' }}
-            </span>
           </div>
 
+          <!-- Divider -->
+          <div class="mx-4 border-t border-gray-100/80"></div>
+
           <!-- Photo gallery — 2×2 grid or full-width hero -->
-          <div *ngIf="item.media && item.media.length">
+          <div *ngIf="item.media && item.media.length" class="mt-0.5">
             <!-- Single image -->
             <img *ngIf="item.media.length === 1"
                  [src]="item.media[0].media_url"
@@ -229,7 +241,8 @@
 
           <!-- Caption -->
           <div class="px-4 py-3">
-            <h3 class="font-bold text-gray-900 text-[15px] leading-snug">{{ item.title }}</h3>
+            <p class="text-[15px] text-gray-800 leading-snug font-semibold"
+               [innerHTML]="formatActivityTitle(item)"></p>
             <p *ngIf="item.description"
                class="text-gray-500 text-sm mt-1 leading-relaxed">
               {{ item.description }}

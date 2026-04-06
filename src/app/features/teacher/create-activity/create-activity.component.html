@@ -60,6 +60,20 @@
         </div>
       </div>
 
+      <!-- Post type selector -->
+      <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+        <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Post Type</label>
+        <div class="flex items-center gap-3">
+          <span class="text-lg shrink-0">🏷️</span>
+          <select formControlName="activity_type"
+                  class="flex-1 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 font-medium
+                         focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 py-3 px-4 cursor-pointer
+                         appearance-none shadow-sm transition-all">
+            <option *ngFor="let t of activityTypes" [value]="t.value">{{ t.label }}</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Title input -->
       <div class="px-6 pt-4">
         <input type="text" formControlName="title"

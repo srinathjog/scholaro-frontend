@@ -30,6 +30,9 @@ export interface TimelineItem {
   check_out_time?: string;
   pickup_by_name?: string;
   status?: string;
+
+  // Attendance enrichment (present when type === 'activity')
+  is_present?: boolean;
 }
 
 /** A child with active enrollments as returned by the parent API */
@@ -76,7 +79,7 @@ export class ParentService {
 
     const sources: any = {
       activities: this.http.get<Activity[]>(`${this.apiUrl}/activities/feed`, {
-        params: { class_id: classId },
+        params: { class_id: classId, ...(enrollmentId ? { enrollment_id: enrollmentId } : {}) },
       }),
       logs: this.http.get<DailyLog[]>(
         `${this.apiUrl}/daily-logs/student/${enrollmentId}`,
@@ -95,7 +98,7 @@ export class ParentService {
     return forkJoin(sources).pipe(
       map((results: any) => {
         const { activities, logs, attendance } = results;
-        const activityItems: TimelineItem[] = (activities as Activity[]).map((a) => ({
+        const activityItems: TimelineItem[] = (activities as Activity[]).map((a: any) => ({
           type: 'activity' as const,
           id: a.id,
           created_at: a.created_at,
@@ -104,6 +107,7 @@ export class ParentService {
           activity_type: a.activity_type,
           media: a.media,
           className: a.assignedClass?.name,
+          is_present: a.is_present,
         }));
 
         const logItems: TimelineItem[] = (logs as DailyLog[]).map((l) => ({

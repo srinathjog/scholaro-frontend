@@ -244,6 +244,11 @@ export class ParentTimelineComponent implements OnInit {
       if (this.isCheckedIn) return `${name} is at school — safe and sound! 🛡️`;
     }
 
+    // If child was absent, show away message
+    if (this.isChildAbsent) {
+      return `${name} was away today. Here's what the class did! 🏠`;
+    }
+
     // Check for mood logs first
     const moodLog = this.timeline.find(i => i.type === 'daily_log' && i.category === 'mood');
     if (moodLog) {
@@ -299,6 +304,14 @@ export class ParentTimelineComponent implements OnInit {
     return '';
   }
 
+  /** Check if child was absent (all activities marked absent, no check-in) */
+  get isChildAbsent(): boolean {
+    const activities = this.timeline.filter(i => i.type === 'activity');
+    return activities.length > 0
+      && activities.every(a => a.is_present === false)
+      && !this.isCheckedIn;
+  }
+
   /** Check if child has been checked in today */
   get isCheckedIn(): boolean {
     return this.timeline.some(i => i.type === 'security' && i.security_event === 'check_in');
@@ -307,5 +320,58 @@ export class ParentTimelineComponent implements OnInit {
   /** Check if child has been checked out today */
   get isCheckedOut(): boolean {
     return this.timeline.some(i => i.type === 'security' && i.security_event === 'check_out');
+  }
+
+  /** Smart title for activity cards based on type + attendance (returns safe HTML) */
+  formatActivityTitle(item: TimelineItem): string {
+    const name = this.selectedChild?.first_name || 'Your child';
+    const title = item.title || 'an activity';
+    const boldName = `<span class="text-orange-600 font-bold">${name}</span>`;
+    const boldTitle = `<span class="text-gray-900 font-bold">${title}</span>`;
+    const className = item.className || this.currentClassName;
+
+    // Notices/announcements are class-wide — never personalized
+    if (item.activity_type === 'notice') {
+      return `📢 ${boldTitle}`;
+    }
+
+    // Curriculum updates are about the class learning
+    if (item.activity_type === 'curriculum') {
+      if (item.is_present === false) {
+        return `${className} learned about ${boldTitle}. ${boldName} can catch up! 📖`;
+      }
+      return `${boldName}'s class explored ${boldTitle} 📖`;
+    }
+
+    // Moments & default — attendance-aware
+    if (item.is_present === false) {
+      return `${className} had fun with ${boldTitle}. We missed ${boldName} today! ❤️`;
+    }
+    return `${boldName} was part of: ${boldTitle} 🌟`;
+  }
+
+  /** Context-aware header label + icon for activity cards */
+  getActivityHeader(item: TimelineItem): { label: string; icon: string } {
+    if (item.is_present === false) {
+      return { label: 'While You Were Away', icon: '🏠' };
+    }
+    if (item.activity_type === 'moment') {
+      return { label: 'Classroom Moment', icon: '📸' };
+    }
+    if (item.activity_type === 'notice') {
+      return { label: 'School Notice', icon: '📢' };
+    }
+    if (item.activity_type === 'curriculum') {
+      return { label: 'Learning Highlight', icon: '📖' };
+    }
+    return { label: 'Daily Highlight', icon: '✨' };
+  }
+
+  /** Tailwind classes for the attendance status badge */
+  getStatusConfig(item: TimelineItem): { text: string; bg: string; dot: string; label: string } {
+    if (item.is_present) {
+      return { text: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-400', label: 'Present' };
+    }
+    return { text: 'text-orange-600', bg: 'bg-orange-50', dot: 'bg-orange-400', label: 'Absent' };
   }
 }

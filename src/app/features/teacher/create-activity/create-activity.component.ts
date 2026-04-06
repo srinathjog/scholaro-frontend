@@ -26,6 +26,12 @@ export class CreateActivityComponent implements OnInit {
   successMessage = '';
   errorMessage = '';
 
+  activityTypes = [
+    { value: 'moment', label: 'Classroom Moment 📸' },
+    { value: 'notice', label: 'School Notice 📢' },
+    { value: 'curriculum', label: 'Learning Update 📖' },
+  ];
+
   constructor(
     private fb: FormBuilder,
     private activityService: ActivityService,
@@ -37,6 +43,7 @@ export class CreateActivityComponent implements OnInit {
   ngOnInit(): void {
     this.form = this.fb.group({
       class_id: ['', Validators.required],
+      activity_type: ['moment'],
       title: ['', [Validators.required, Validators.maxLength(255)]],
       description: [''],
     });
@@ -98,7 +105,7 @@ export class CreateActivityComponent implements OnInit {
         class_id: this.form.value.class_id,
         title: this.form.value.title,
         description: this.form.value.description || undefined,
-        activity_type: 'update',
+        activity_type: this.form.value.activity_type || 'moment',
         media_urls: mediaUrls,
       };
 
