@@ -36,6 +36,7 @@ export interface OnboardSchoolPayload {
 
 export interface OnboardResult {
   tenant_id: string;
+  tenant_code: string;
   school_name: string;
   subdomain: string;
   admin_email: string;
