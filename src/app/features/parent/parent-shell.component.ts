@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { PushNotificationService } from '../../core/services/push-notification.service';
 import { PwaService } from '../../core/services/pwa.service';
+import { ParentService } from '../../data/services/parent.service';
 
 @Component({
   selector: 'app-parent-shell',
@@ -77,6 +78,7 @@ import { PwaService } from '../../core/services/pwa.service';
 export class ParentShellComponent implements OnInit {
   private pushService = inject(PushNotificationService);
   private pwaService = inject(PwaService);
+  private parentService = inject(ParentService);
   private cdr = inject(ChangeDetectorRef);
 
   showInstallBanner = false;
@@ -109,6 +111,7 @@ export class ParentShellComponent implements OnInit {
   }
 
   logout(): void {
+    this.parentService.clearCache();
     this.authService.logout();
     this.router.navigate(['/login']);
   }

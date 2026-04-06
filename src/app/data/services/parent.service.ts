@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, map, of, catchError } from 'rxjs';
+import { Observable, forkJoin, map, of, catchError, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Activity } from './activity.service';
 import { DailyLog, LogCategory } from './daily-log.service';
@@ -53,11 +53,27 @@ export interface ParentChild {
 export class ParentService {
   private readonly apiUrl = environment.apiUrl;
 
+  // Cached observables
+  private children$: Observable<ParentChild[]> | null = null;
+  private timelineCache = new Map<string, { data: TimelineItem[]; ts: number }>();
+  private readonly TIMELINE_TTL = 60_000; // 1 minute cache
+
   constructor(private http: HttpClient) {}
 
-  /** Get the logged-in parent's children with their enrollments + class names */
+  /** Get children — cached, shared across components. Call clearCache() on logout. */
   getMyChildren(): Observable<ParentChild[]> {
-    return this.http.get<ParentChild[]>(`${this.apiUrl}/parents/me/children`);
+    if (!this.children$) {
+      this.children$ = this.http
+        .get<ParentChild[]>(`${this.apiUrl}/parents/me/children`)
+        .pipe(shareReplay(1));
+    }
+    return this.children$;
+  }
+
+  /** Clear all caches (call on logout or child data change) */
+  clearCache(): void {
+    this.children$ = null;
+    this.timelineCache.clear();
   }
 
   /**
@@ -76,6 +92,11 @@ export class ParentService {
     studentId?: string,
   ): Observable<TimelineItem[]> {
     const d = date || new Date().toISOString().slice(0, 10);
+    const cacheKey = `${enrollmentId}_${classId}_${d}_${studentId || ''}`;
+    const cached = this.timelineCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < this.TIMELINE_TTL) {
+      return of(cached.data);
+    }
 
     const sources: any = {
       activities: this.http.get<Activity[]>(`${this.apiUrl}/activities/feed`, {
@@ -154,6 +175,7 @@ export class ParentService {
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
       }),
+      tap((items) => this.timelineCache.set(cacheKey, { data: items, ts: Date.now() })),
     );
   }
 }
