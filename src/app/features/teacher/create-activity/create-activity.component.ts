@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import {
@@ -38,7 +38,8 @@ export class CreateActivityComponent implements OnInit {
     private activityService: ActivityService,
     private uploadService: UploadService,
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
@@ -52,8 +53,14 @@ export class CreateActivityComponent implements OnInit {
     const user = this.authService['currentUserSubject'].value;
     if (user) {
       this.activityService.getClassesByTeacher(user.userId).subscribe({
-        next: (data) => (this.assignments = data),
-        error: () => (this.errorMessage = 'Could not load your classes.'),
+        next: (data) => {
+          this.assignments = data;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.errorMessage = 'Could not load your classes.';
+          this.cdr.detectChanges();
+        },
       });
     }
   }
@@ -71,6 +78,7 @@ export class CreateActivityComponent implements OnInit {
       reader.onload = (e) => {
         this.previews.push(e.target?.result as string);
         this.loadingPreviews--;
+        this.cdr.detectChanges();
       };
       reader.readAsDataURL(file);
     }
@@ -120,13 +128,18 @@ export class CreateActivityComponent implements OnInit {
           this.form.reset();
           this.selectedFiles = [];
           this.previews = [];
+          this.cdr.detectChanges();
           setTimeout(() => this.router.navigate(['/teacher/history']), 1500);
         },
         error: (err) => {
           this.errorMessage =
             err?.error?.message || 'Failed to post activity. Please try again.';
+          this.cdr.detectChanges();
         },
-        complete: () => (this.submitting = false),
+        complete: () => {
+          this.submitting = false;
+          this.cdr.detectChanges();
+        },
       });
     } catch (err: any) {
       this.errorMessage = err.message || 'Image upload failed.';
