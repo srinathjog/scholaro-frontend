@@ -1,17 +1,21 @@
 // Service Worker for Push Notifications — Scholaro Preschool
-// This file lives at the root of the Angular app's public folder
+// Fallback handler: Angular's ngsw-worker.js is the primary SW,
+// but this handles push if ngsw is not active (e.g., dev mode)
 
 self.addEventListener('push', function (event) {
   if (!event.data) return;
 
-  const data = event.data.json();
+  const raw = event.data.json();
+  // Support both NGSW nested format { notification: { title, body } }
+  // and flat format { title, body }
+  const data = raw.notification || raw;
 
   const options = {
     body: data.body || '',
-    icon: data.icon || '/assets/icons/icon-192.png',
-    badge: '/assets/icons/icon-72.png',
+    icon: data.icon || '/icons/scholaro-192.png',
+    badge: '/icons/scholaro-192.png',
     vibrate: [100, 50, 100],
-    data: { url: data.url || '/parent/timeline' },
+    data: { url: data.data?.onActionClick?.default?.url || data.url || '/parent/timeline' },
     actions: [{ action: 'open', title: 'View' }],
   };
 

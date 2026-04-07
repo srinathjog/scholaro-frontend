@@ -1,6 +1,6 @@
-import { Component, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectorRef, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 
 import { CommonModule } from '@angular/common';
@@ -14,16 +14,18 @@ import { RouterModule } from '@angular/router';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   errorMessage: string | null = null;
   loading = false;
   isSuperAdmin = false;
+  codeFromUrl = false;
 
   constructor(
     private fb: FormBuilder,
     public authService: AuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {
     this.loginForm = this.fb.group({
@@ -31,6 +33,15 @@ export class LoginComponent {
       password: ['', [Validators.required, Validators.minLength(6)]],
       schoolCode: ['', Validators.required]
     });
+  }
+
+  ngOnInit(): void {
+    // Smart Link: auto-fill school code from ?code= query param
+    const code = this.route.snapshot.queryParamMap.get('code');
+    if (code) {
+      this.loginForm.get('schoolCode')?.setValue(code.toUpperCase());
+      this.codeFromUrl = true;
+    }
   }
 
   get email() { return this.loginForm.get('email'); }
