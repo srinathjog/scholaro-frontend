@@ -49,6 +49,12 @@ export interface ParentChild {
   }[];
 }
 
+/** Result from timeline fetch, includes pagination info for activities */
+export interface TimelineResult {
+  items: TimelineItem[];
+  hasNextPage: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ParentService {
   private readonly apiUrl = environment.apiUrl;
@@ -123,7 +129,7 @@ export class ParentService {
     classId: string,
     date?: string,
     studentId?: string,
-  ): Observable<TimelineItem[]> {
+  ): Observable<TimelineResult> {
     const d = date || new Date().toISOString().slice(0, 10);
     const cacheKey = `${enrollmentId}_${classId}_${d}_${studentId || ''}`;
     const cached = this.timelineData.get(cacheKey);
@@ -133,7 +139,7 @@ export class ParentService {
     if (cached) {
       // Return cached instantly, refresh in background for next visit
       fresh$.subscribe();
-      return of(cached);
+      return of({ items: cached, hasNextPage: false });
     }
 
     return fresh$;
@@ -145,7 +151,7 @@ export class ParentService {
     classId: string,
     date?: string,
     studentId?: string,
-  ): Observable<TimelineItem[]> {
+  ): Observable<TimelineResult> {
     const d = date || new Date().toISOString().slice(0, 10);
     const cacheKey = `${enrollmentId}_${classId}_${d}_${studentId || ''}`;
     return this.fetchTimeline$(enrollmentId, classId, d, studentId, cacheKey);
@@ -157,11 +163,11 @@ export class ParentService {
     date: string,
     studentId: string | undefined,
     cacheKey: string,
-  ): Observable<TimelineItem[]> {
+  ): Observable<TimelineResult> {
 
     const sources: any = {
-      activities: this.http.get<Activity[]>(`${this.apiUrl}/activities/feed`, {
-        params: { class_id: classId, ...(enrollmentId ? { enrollment_id: enrollmentId } : {}) },
+      activities: this.http.get<any>(`${this.apiUrl}/activities/feed`, {
+        params: { class_id: classId, ...(enrollmentId ? { enrollment_id: enrollmentId } : {}), page: '1', limit: '10' },
       }),
       logs: this.http.get<DailyLog[]>(
         `${this.apiUrl}/daily-logs/student/${enrollmentId}`,
@@ -179,8 +185,11 @@ export class ParentService {
 
     return forkJoin(sources).pipe(
       map((results: any) => {
-        const { activities, logs, attendance } = results;
-        const activityItems: TimelineItem[] = (activities as Activity[]).map((a: any) => ({
+        const activitiesRaw = results.activities;
+        const activityList = activitiesRaw?.data ?? activitiesRaw;
+        const hasNextPage = activitiesRaw?.meta?.hasNextPage ?? false;
+        const { logs, attendance } = results;
+        const activityItems: TimelineItem[] = (activityList as Activity[]).map((a: any) => ({
           type: 'activity' as const,
           id: a.id,
           created_at: a.created_at,
@@ -231,12 +240,47 @@ export class ParentService {
         }
 
         // Merge & sort newest-first
-        return [...activityItems, ...logItems, ...securityItems].sort(
+        const items = [...activityItems, ...logItems, ...securityItems].sort(
           (a, b) =>
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
+        return { items, hasNextPage } as TimelineResult;
       }),
-      tap((items) => this.timelineData.set(cacheKey, items)),
+      tap((result) => this.timelineData.set(cacheKey, result.items)),
+    );
+  }
+
+  /** Fetch next page of activities for infinite scroll */
+  getNextActivityPage(
+    classId: string,
+    enrollmentId: string,
+    page: number,
+    limit = 10,
+  ): Observable<{ items: TimelineItem[]; hasNextPage: boolean }> {
+    return this.http.get<any>(`${this.apiUrl}/activities/feed`, {
+      params: {
+        class_id: classId,
+        ...(enrollmentId ? { enrollment_id: enrollmentId } : {}),
+        page: String(page),
+        limit: String(limit),
+      },
+    }).pipe(
+      map((res: any) => {
+        const data = res.data ?? res;
+        const hasNextPage = res.meta?.hasNextPage ?? false;
+        const items: TimelineItem[] = (data as Activity[]).map((a: any) => ({
+          type: 'activity' as const,
+          id: a.id,
+          created_at: a.created_at,
+          title: a.title,
+          description: a.description,
+          activity_type: a.activity_type,
+          media: a.media,
+          className: a.assignedClass?.name,
+          is_present: a.is_present,
+        }));
+        return { items, hasNextPage };
+      }),
     );
   }
 }

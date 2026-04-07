@@ -12,7 +12,7 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptorsFromDi()),
     importProvidersFrom(CoreModule), provideServiceWorker('ngsw-worker.js', {
             enabled: !isDevMode(),
-            registrationStrategy: 'registerWhenStable:30000'
+            registrationStrategy: 'registerWhenStable:5000'
           }),
   ]
 };

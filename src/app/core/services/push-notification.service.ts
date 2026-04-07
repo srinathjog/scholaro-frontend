@@ -14,13 +14,38 @@ export class PushNotificationService {
     return !!this.swPush?.isEnabled;
   }
 
+  /** iOS requires Add-to-Home-Screen + user gesture for push */
+  get isIOS(): boolean {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  /** Check if running as installed PWA (standalone mode) */
+  get isStandalone(): boolean {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      (navigator as any).standalone === true;
+  }
+
+  /** Whether push can work right now */
+  get canSubscribe(): boolean {
+    if (!this.isSupported) return false;
+    // iOS only supports push when installed as PWA
+    if (this.isIOS && !this.isStandalone) return false;
+    return true;
+  }
+
   /**
    * Request push permission, subscribe via the Angular service worker,
    * and store the subscription on the backend.
    * Returns true if successfully subscribed.
    */
   async subscribe(): Promise<boolean> {
-    if (!this.isSupported) return false;
+    if (!this.canSubscribe) {
+      if (this.isIOS && !this.isStandalone) {
+        console.log('Push skipped: iOS requires Add to Home Screen first');
+      }
+      return false;
+    }
 
     try {
       // 1. Get VAPID public key from backend

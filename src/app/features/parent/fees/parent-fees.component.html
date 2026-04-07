@@ -2,7 +2,7 @@
 <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/30">
 
   <!-- ─── HEADER ─── -->
-  <div class="sticky top-0 z-30 bg-white/95 backdrop-blur-xl border-b border-slate-100">
+  <div class="sticky top-0 z-30 bg-white border-b border-slate-100">
     <div class="max-w-lg mx-auto px-4 pt-4 pb-3">
       <div class="flex items-center justify-between">
         <div>
@@ -125,11 +125,13 @@
                        active:scale-[0.97]">
           💳 Pay Now
         </button>
-        <button class="py-4 rounded-2xl bg-white text-slate-700 font-extrabold text-sm
+        <a [href]="schoolPhone ? 'tel:' + schoolPhone : null"
+                [class.opacity-50]="!schoolPhone" [class.pointer-events-none]="!schoolPhone"
+                class="py-4 rounded-2xl bg-white text-slate-700 font-extrabold text-sm
                        border border-slate-200 shadow-sm hover:bg-slate-50 transition
-                       active:scale-[0.97]">
+                       active:scale-[0.97] flex items-center justify-center">
           📞 Contact School
-        </button>
+        </a>
       </div>
 
       <!-- ─── UNPAID INVOICES ─── -->

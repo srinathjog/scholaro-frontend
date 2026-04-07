@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -16,7 +16,7 @@ import { PushNotificationService } from '../../../core/services/push-notificatio
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './parent-timeline.component.html',
 })
-export class ParentTimelineComponent implements OnInit {
+export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit {
   // Data
   children: ParentChild[] = [];
   timeline: TimelineItem[] = [];
@@ -35,6 +35,13 @@ export class ParentTimelineComponent implements OnInit {
   refreshing = false;
   errorMessage = '';
   showFirstLoginBanner = false;
+
+  // Infinite scroll state
+  currentPage = 1;
+  hasNextPage = false;
+  loadingMore = false;
+  private scrollObserver: IntersectionObserver | null = null;
+  @ViewChild('scrollSentinel') scrollSentinel!: ElementRef<HTMLDivElement>;
 
   // Category display config
   categoryConfig: Record<string, { icon: string; label: string; color: string; bg: string; sentence: Record<string, string> }> = {
@@ -87,6 +94,54 @@ export class ParentTimelineComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
+  ngAfterViewInit(): void {
+    this.setupScrollObserver();
+  }
+
+  ngOnDestroy(): void {
+    this.scrollObserver?.disconnect();
+  }
+
+  /** Wire IntersectionObserver to the sentinel div at the bottom of the feed */
+  private setupScrollObserver(): void {
+    this.scrollObserver?.disconnect();
+    // Wait one tick for the sentinel to render
+    setTimeout(() => {
+      const el = this.scrollSentinel?.nativeElement;
+      if (!el) return;
+      this.scrollObserver = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) this.loadMoreActivities();
+        },
+        { rootMargin: '200px' },
+      );
+      this.scrollObserver.observe(el);
+    });
+  }
+
+  /** Fetch next page of activities and append to timeline */
+  loadMoreActivities(): void {
+    if (this.loadingMore || !this.hasNextPage) return;
+    this.loadingMore = true;
+    const nextPage = this.currentPage + 1;
+
+    this.parentService
+      .getNextActivityPage(this.selectedClassId, this.selectedEnrollmentId, nextPage)
+      .subscribe({
+        next: ({ items, hasNextPage }) => {
+          this.timeline = [...this.timeline, ...items];
+          this.currentPage = nextPage;
+          this.hasNextPage = hasNextPage;
+          this.loadingMore = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.loadingMore = false;
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
   /** Step 1: Load parent's children with enrollments */
   private loadChildren(): void {
     this.loadingChildren = this.children.length === 0;
@@ -137,15 +192,19 @@ export class ParentTimelineComponent implements OnInit {
 
     this.loading = this.timeline.length === 0;
     this.errorMessage = '';
+    this.currentPage = 1;
+    this.hasNextPage = false;
 
     this.parentService
       .getTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
       .subscribe({
-        next: (items) => {
-          this.timeline = items;
+        next: (result) => {
+          this.timeline = result.items;
+          this.hasNextPage = result.hasNextPage;
           this.loading = false;
           this.refreshing = false;
           this.cdr.detectChanges();
+          this.setupScrollObserver();
         },
         error: () => {
           this.errorMessage = 'Could not load timeline. Pull down to retry.';
@@ -163,10 +222,13 @@ export class ParentTimelineComponent implements OnInit {
     this.parentService
       .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
       .subscribe({
-        next: (items) => {
-          this.timeline = items;
+        next: (result) => {
+          this.timeline = result.items;
+          this.hasNextPage = result.hasNextPage;
+          this.currentPage = 1;
           this.refreshing = false;
           this.cdr.detectChanges();
+          this.setupScrollObserver();
         },
         error: () => {
           this.refreshing = false;
@@ -222,6 +284,11 @@ export class ParentTimelineComponent implements OnInit {
   formatLogValue(value: string): string {
     return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
+
+  /** trackBy functions for *ngFor performance */
+  trackChild(_: number, child: ParentChild): string { return child.id; }
+  trackTimelineItem(_: number, item: TimelineItem): string { return item.id || `${item.type}-${item.created_at}`; }
+  trackMedia(_: number, m: any): string { return m.media_url || m.id; }
 
   /** Get child's initials */
   getInitials(child: ParentChild): string {

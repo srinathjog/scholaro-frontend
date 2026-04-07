@@ -1,8 +1,10 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient } from '@angular/common/http';
 import { ParentService, ParentChild } from '../../../data/services/parent.service';
 import { Fee } from '../../../data/services/fee.service';
+import { environment } from '../../../../environments/environment';
 
 interface FeesSummary {
   total_due: number;
@@ -41,13 +43,20 @@ export class ParentFeesComponent implements OnInit {
   showPayModal = false;
   payFee: Fee | null = null;
 
+  // School contact
+  schoolPhone = '';
+
   constructor(
     private parentService: ParentService,
+    private http: HttpClient,
     private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnInit(): void {
     this.loadChildren();
+    this.http.get<any>(`${environment.apiUrl}/settings/branding`).subscribe({
+      next: (s) => { this.schoolPhone = s.contact_phone || ''; this.cdr.detectChanges(); },
+    });
   }
 
   private loadChildren(): void {

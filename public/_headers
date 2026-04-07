@@ -6,3 +6,18 @@
 
 /sw.js
   Content-Type: application/javascript
+
+# Hashed JS/CSS bundles — immutable for 1 year
+/*.*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+# Static images cached for 7 days
+/icons/*
+  Cache-Control: public, max-age=604800
+
+# Fonts cached for 1 year
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable

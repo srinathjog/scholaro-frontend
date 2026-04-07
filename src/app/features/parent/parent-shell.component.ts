@@ -11,6 +11,29 @@ import { ParentService } from '../../data/services/parent.service';
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
+    <!-- iOS Push Notification Banner -->
+    <div *ngIf="showNotifBanner"
+         class="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg safe-area-top">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+          <span class="text-lg">🔔</span>
+        </div>
+        <p class="text-sm font-medium truncate">Tap to enable activity notifications</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button (click)="enableNotifications()"
+                class="px-3 py-1.5 bg-white text-orange-700 text-xs font-bold rounded-lg hover:bg-orange-50 transition-colors">
+          Enable
+        </button>
+        <button (click)="dismissNotifBanner()"
+                class="p-1 text-white/70 hover:text-white transition-colors">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Install Banner -->
     <div *ngIf="showInstallBanner"
          class="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg safe-area-top">
@@ -36,7 +59,7 @@ import { ParentService } from '../../data/services/parent.service';
       </div>
     </div>
 
-    <div class="min-h-screen pb-16" [class.pt-14]="showInstallBanner">
+    <div class="min-h-screen pb-16" [class.pt-14]="showInstallBanner || showNotifBanner">
       <router-outlet></router-outlet>
     </div>
 
@@ -82,12 +105,24 @@ export class ParentShellComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   showInstallBanner = false;
+  showNotifBanner = false;
 
   constructor(private authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
-    // Auto-subscribe parent for push notifications (non-blocking)
-    this.pushService.subscribe();
+    // Push notifications: auto-subscribe on Android, show banner on iOS
+    if (this.pushService.isIOS && this.pushService.isStandalone) {
+      // iOS PWA: needs user gesture — show banner if not already subscribed
+      this.pushService.isSubscribed().then(subscribed => {
+        if (!subscribed && !localStorage.getItem('scholaro_notif_dismissed')) {
+          this.showNotifBanner = true;
+          this.cdr.detectChanges();
+        }
+      });
+    } else if (!this.pushService.isIOS) {
+      // Android/desktop: auto-subscribe silently
+      this.pushService.subscribe();
+    }
 
     // Show install banner if app is installable and user hasn't dismissed it
     if (!localStorage.getItem('scholaro_install_dismissed')) {
@@ -120,6 +155,21 @@ export class ParentShellComponent implements OnInit {
   dismissInstallBanner(): void {
     this.showInstallBanner = false;
     localStorage.setItem('scholaro_install_dismissed', 'true');
+    this.cdr.detectChanges();
+  }
+
+  async enableNotifications(): Promise<void> {
+    const success = await this.pushService.subscribe();
+    this.showNotifBanner = false;
+    if (!success) {
+      console.warn('Push subscription failed on iOS');
+    }
+    this.cdr.detectChanges();
+  }
+
+  dismissNotifBanner(): void {
+    this.showNotifBanner = false;
+    localStorage.setItem('scholaro_notif_dismissed', 'true');
     this.cdr.detectChanges();
   }
 
