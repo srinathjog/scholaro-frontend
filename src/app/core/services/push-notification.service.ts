@@ -89,10 +89,11 @@ export class PushNotificationService {
         console.warn('[Push] No VAPID public key returned from server');
         return false;
       }
+      console.log('[Push] VAPID key received, length:', publicKey.length, 'starts:', publicKey.slice(0, 10) + '...');
 
       // 2. Wait for service worker to be fully active (critical for iOS)
       const registration = await navigator.serviceWorker.ready;
-      console.log('[Push] Service worker ready, scope:', registration.scope);
+      console.log('[Push] Service worker ready, scope:', registration.scope, 'state:', registration.active?.state);
 
       // 3. Check if already subscribed
       const existingSub = await registration.pushManager.getSubscription();
@@ -117,9 +118,14 @@ export class PushNotificationService {
       console.log('[Push] Subscription registered with backend');
       return true;
     } catch (err: any) {
-      console.error('[Push] Subscription failed:', err?.message || err);
+      const msg = err?.message || String(err);
+      console.error('[Push] Subscription failed:', msg);
       if (err?.name === 'NotAllowedError') {
         console.warn('[Push] User denied notification permission');
+      } else if (msg.includes('push service') || msg.includes('Registration failed')) {
+        console.warn('[Push] Push service error — may be a network/FCM issue on Android');
+      } else if (msg.includes('applicationServerKey') || msg.includes('VAPID')) {
+        console.warn('[Push] VAPID key mismatch — ensure frontend key matches backend VAPID_PUBLIC_KEY');
       }
       return false;
     }

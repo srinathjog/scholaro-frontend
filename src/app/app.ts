@@ -56,38 +56,42 @@ export class App implements OnInit, OnDestroy {
 
   private setupDynamicBranding(): void {
     const code = this.route.snapshot.queryParamMap.get('code');
-    if (!code) return;
+    if (!code) return;                       // ← no code → leave default manifest untouched
 
-    const apiUrl = environment.apiUrl;
-    const head = this.document.head;
+    try {
+      const apiUrl = environment.apiUrl;
+      const head = this.document.head;
 
-    // Swap manifest to school-specific dynamic manifest
-    let manifest = head.querySelector('link[rel="manifest"]');
-    if (manifest) {
-      manifest.setAttribute('href', `${apiUrl}/tenants/manifest/${code.toUpperCase()}`);
+      // Swap manifest to school-specific dynamic manifest
+      const manifest = head.querySelector('link[rel="manifest"]');
+      if (manifest) {
+        manifest.setAttribute('href', `${apiUrl}/tenants/manifest/${code.toUpperCase()}`);
+      }
+
+      // iOS: update apple-touch-icon + theme-color from manifest data
+      fetch(`${apiUrl}/tenants/manifest/${code.toUpperCase()}`)
+        .then(res => { if (!res.ok) throw new Error('manifest fetch failed'); return res.json(); })
+        .then(data => {
+          const logoUrl = data.icons?.[0]?.src;
+          if (logoUrl) {
+            let appleIcon = head.querySelector('link[rel="apple-touch-icon"]');
+            if (!appleIcon) {
+              appleIcon = this.document.createElement('link');
+              appleIcon.setAttribute('rel', 'apple-touch-icon');
+              head.appendChild(appleIcon);
+            }
+            appleIcon.setAttribute('href', logoUrl);
+          }
+
+          // Also update theme-color meta tag
+          const themeMeta = head.querySelector('meta[name="theme-color"]');
+          if (themeMeta && data.theme_color) {
+            themeMeta.setAttribute('content', data.theme_color);
+          }
+        })
+        .catch(() => { /* fall back to defaults silently */ });
+    } catch (e) {
+      console.warn('[Branding] Dynamic manifest injection failed, using defaults', e);
     }
-
-    // iOS: update apple-touch-icon (fetch logo from manifest endpoint)
-    fetch(`${apiUrl}/tenants/manifest/${code.toUpperCase()}`)
-      .then(res => res.json())
-      .then(data => {
-        const logoUrl = data.icons?.[0]?.src;
-        if (!logoUrl) return;
-
-        let appleIcon = head.querySelector('link[rel="apple-touch-icon"]');
-        if (!appleIcon) {
-          appleIcon = this.document.createElement('link');
-          appleIcon.setAttribute('rel', 'apple-touch-icon');
-          head.appendChild(appleIcon);
-        }
-        appleIcon.setAttribute('href', logoUrl);
-
-        // Also update theme-color meta tag
-        const themeMeta = head.querySelector('meta[name="theme-color"]');
-        if (themeMeta && data.theme_color) {
-          themeMeta.setAttribute('content', data.theme_color);
-        }
-      })
-      .catch(() => { /* fall back to defaults silently */ });
   }
 }
