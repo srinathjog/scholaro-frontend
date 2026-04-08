@@ -1,8 +1,9 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { filter } from 'rxjs/operators';
+import { ActivityService } from '../../data/services/activity.service';
+import { filter, take } from 'rxjs/operators';
 
 @Component({
   selector: 'app-teacher-shell',
@@ -127,12 +128,24 @@ import { filter } from 'rxjs/operators';
     }
   `],
 })
-export class TeacherShellComponent {
+export class TeacherShellComponent implements OnInit {
   sidebarOpen = false;
 
-  constructor(private authService: AuthService, private router: Router) {
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private activityService: ActivityService,
+  ) {
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
       this.sidebarOpen = false;
+    });
+  }
+
+  ngOnInit(): void {
+    this.authService.currentUser$.pipe(take(1)).subscribe(user => {
+      if (user?.userId) {
+        this.activityService.getClassesByTeacher(user.userId).subscribe();
+      }
     });
   }
 

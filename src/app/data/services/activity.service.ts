@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface CreateActivityDto {
@@ -39,6 +39,7 @@ export interface TeacherAssignment {
 @Injectable({ providedIn: 'root' })
 export class ActivityService {
   private readonly apiUrl = environment.apiUrl;
+  private _classesCache: TeacherAssignment[] | null = null;
 
   constructor(private http: HttpClient) {}
 
@@ -53,9 +54,17 @@ export class ActivityService {
   }
 
   getClassesByTeacher(teacherId: string): Observable<TeacherAssignment[]> {
-    return this.http.get<TeacherAssignment[]>(
+    const fresh$ = this.http.get<TeacherAssignment[]>(
       `${this.apiUrl}/teacher-assignments/teacher/${teacherId}`
-    );
+    ).pipe(tap(data => this._classesCache = data));
+
+    if (this._classesCache) {
+      // Return cache instantly, refresh in background for next time
+      fresh$.subscribe();
+      return of(this._classesCache);
+    }
+
+    return fresh$;
   }
 
   getTeacherActivities(userId: string): Observable<Activity[]> {

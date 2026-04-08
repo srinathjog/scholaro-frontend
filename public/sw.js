@@ -36,19 +36,22 @@ self.addEventListener('push', function (event) {
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/parent/timeline';
+  const targetPath = event.notification.data?.url || '/parent/timeline';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
-      // If the app is already open, focus it
+      // 1. Check if any window is already open on scholaro.app
       for (const client of clientList) {
-        if (client.url.includes(targetUrl) && 'focus' in client) {
-          return client.focus();
+        if (client.url.includes('scholaro.app') && 'navigate' in client) {
+          // Focus the existing window and navigate to the target page
+          return client.focus().then(function () {
+            return client.navigate(targetPath);
+          });
         }
       }
-      // Otherwise open a new window
+      // 2. No existing window — open a new one
       if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
+        return clients.openWindow('https://scholaro.app' + targetPath);
       }
     }),
   );

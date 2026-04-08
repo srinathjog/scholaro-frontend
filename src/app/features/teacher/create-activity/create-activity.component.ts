@@ -24,6 +24,9 @@ export class CreateActivityComponent implements OnInit {
   loadingPreviews = 0;
   submitting = false;
   uploading = false;
+  compressing = false;
+  compressionProgress = 0;
+  uploadProgress = 0;
   successMessage = '';
   errorMessage = '';
 
@@ -65,25 +68,48 @@ export class CreateActivityComponent implements OnInit {
     }
   }
 
-  onFilesSelected(event: Event): void {
+  async onFilesSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (!input.files) return;
 
-    const newFiles = Array.from(input.files);
-    this.selectedFiles.push(...newFiles);
-    this.loadingPreviews += newFiles.length;
+    const rawFiles = Array.from(input.files);
+    input.value = '';
 
-    for (const file of newFiles) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        this.previews.push(e.target?.result as string);
-        this.loadingPreviews--;
-        this.cdr.detectChanges();
-      };
-      reader.readAsDataURL(file);
+    this.compressing = true;
+    this.compressionProgress = 0;
+    this.cdr.detectChanges();
+
+    const { default: imageCompression } = await import('browser-image-compression');
+
+    const options = {
+      maxSizeMB: 0.3,          // Target ~300KB per image
+      maxWidthOrHeight: 1280,   // Max dimension
+      useWebWorker: true,
+      initialQuality: 0.7,
+    };
+
+    let processed = 0;
+    for (const file of rawFiles) {
+      try {
+        const compressed = await imageCompression(file, options);
+        this.selectedFiles.push(compressed);
+
+        // Generate preview from compressed file
+        const url = URL.createObjectURL(compressed);
+        this.previews.push(url);
+      } catch {
+        // If compression fails, use original
+        this.selectedFiles.push(file);
+        const url = URL.createObjectURL(file);
+        this.previews.push(url);
+      }
+      processed++;
+      this.compressionProgress = Math.round((processed / rawFiles.length) * 100);
+      this.cdr.detectChanges();
     }
 
-    input.value = '';
+    this.compressing = false;
+    this.cdr.detectChanges();
   }
 
   removeImage(index: number): void {
@@ -110,7 +136,12 @@ export class CreateActivityComponent implements OnInit {
       let mediaUrls: string[] = [];
       if (this.selectedFiles.length) {
         this.uploading = true;
-        mediaUrls = await this.uploadService.uploadImages(this.selectedFiles);
+        this.uploadProgress = 0;
+        this.cdr.detectChanges();
+        mediaUrls = await this.uploadService.uploadImages(
+          this.selectedFiles,
+          (pct) => { this.uploadProgress = pct; this.cdr.detectChanges(); },
+        );
         this.uploading = false;
       }
 

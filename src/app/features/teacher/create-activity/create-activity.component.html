@@ -78,16 +78,20 @@
       <div class="px-6 pt-4">
         <input type="text" formControlName="title"
                placeholder="Activity title (e.g. Art Class 🎨)"
-               class="w-full border-0 border-b border-gray-200 text-gray-900 font-semibold text-base
-                      placeholder-gray-400 focus:ring-0 focus:border-indigo-400 pb-3 px-0 bg-transparent" />
+               class="w-full border border-gray-200 rounded-xl text-gray-900 font-semibold text-base
+                      placeholder-gray-400 py-3 px-4 bg-white shadow-sm
+                      outline-none transition-all duration-200
+                      focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400" />
       </div>
 
       <!-- Description textarea — "What's on your mind" area -->
       <div class="px-6 py-4">
         <textarea formControlName="description" rows="4"
                   placeholder="What's on your mind? Write a quick note for parents…"
-                  class="w-full border-0 text-gray-700 text-sm leading-relaxed placeholder-gray-400
-                         focus:ring-0 resize-none px-0 bg-transparent"></textarea>
+                  class="w-full border border-gray-200 rounded-xl text-gray-700 text-sm leading-relaxed
+                         placeholder-gray-400 py-3 px-4 bg-white shadow-sm resize-none
+                         outline-none transition-all duration-200
+                         focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"></textarea>
       </div>
 
       <!-- Loading previews indicator -->
@@ -207,43 +211,78 @@
       </div>
 
       <!-- Action bar -->
-      <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
-        <!-- Attach photos (shown when no previews yet) -->
-        <label *ngIf="!previews.length"
-               class="flex items-center gap-2 cursor-pointer text-gray-600 hover:text-indigo-600 transition-colors">
-          <div class="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center">
-            <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-          </div>
-          <span class="text-sm font-medium">Add Photos</span>
-          <input type="file" multiple accept="image/*" (change)="onFilesSelected($event)" class="hidden" />
-        </label>
-        <div *ngIf="previews.length"></div>
+      <div class="px-6 py-4 border-t border-gray-100">
+        <!-- Camera + Gallery buttons (shown when no previews yet) -->
+        <div *ngIf="!previews.length" class="flex gap-3 mb-4">
+          <!-- Camera button -->
+          <label class="flex-1 flex items-center justify-center gap-2 cursor-pointer
+                        bg-indigo-50 hover:bg-indigo-100 border-2 border-dashed border-indigo-200
+                        rounded-2xl py-5 transition-colors active:scale-95">
+            <span class="text-2xl">📸</span>
+            <span class="text-sm font-semibold text-indigo-700">Camera</span>
+            <input #cameraInput type="file" accept="image/*" capture="environment"
+                   (change)="onFilesSelected($event)" class="hidden" />
+          </label>
+          <!-- Gallery button -->
+          <label class="flex-1 flex items-center justify-center gap-2 cursor-pointer
+                        bg-purple-50 hover:bg-purple-100 border-2 border-dashed border-purple-200
+                        rounded-2xl py-5 transition-colors active:scale-95">
+            <span class="text-2xl">🖼️</span>
+            <span class="text-sm font-semibold text-purple-700">Gallery</span>
+            <input type="file" multiple accept="image/*"
+                   (change)="onFilesSelected($event)" class="hidden" />
+          </label>
+        </div>
 
-        <!-- Post button -->
-        <button type="submit"
-                [disabled]="form.invalid || submitting"
-                class="px-8 py-3 rounded-full text-white font-bold text-sm tracking-wide transition-all duration-200
-                       bg-gradient-to-r from-indigo-600 to-purple-600
-                       hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg hover:shadow-indigo-200
-                       disabled:from-gray-300 disabled:to-gray-300 disabled:shadow-none disabled:cursor-not-allowed
-                       flex items-center gap-2">
-          <!-- Uploading spinner -->
-          <ng-container *ngIf="submitting">
-            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        <!-- Compression progress bar -->
+        <div *ngIf="compressing" class="mb-4">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-semibold text-indigo-600">Compressing photos…</span>
+            <span class="text-xs font-bold text-indigo-600">{{ compressionProgress }}%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                 [style.width.%]="compressionProgress"></div>
+          </div>
+        </div>
+
+        <!-- Upload progress bar -->
+        <div *ngIf="uploading" class="mb-4">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-semibold text-emerald-600">Uploading…</span>
+            <span class="text-xs font-bold text-emerald-600">{{ uploadProgress }}%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full transition-all duration-300"
+                 [style.width.%]="uploadProgress"></div>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div *ngIf="previews.length"></div>
+          <div *ngIf="!previews.length"></div>
+
+          <!-- Post button -->
+          <button type="submit"
+                  [disabled]="form.invalid || submitting || compressing"
+                  class="px-8 py-3 rounded-full text-white font-bold text-sm tracking-wide transition-all duration-200
+                         bg-gradient-to-r from-indigo-600 to-purple-600
+                         hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg hover:shadow-indigo-200
+                         disabled:from-gray-300 disabled:to-gray-300 disabled:shadow-none disabled:cursor-not-allowed
+                         flex items-center gap-2">
+            <ng-container *ngIf="submitting">
+              <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+              </svg>
+            </ng-container>
+            <svg *ngIf="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
             </svg>
-          </ng-container>
-          <!-- Button icon -->
-          <svg *ngIf="!submitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
-          </svg>
-          {{ uploading ? 'Uploading photos…' : (submitting ? 'Posting…' : 'Post to Parents') }}
-        </button>
+            {{ compressing ? 'Compressing…' : (uploading ? 'Uploading photos…' : (submitting ? 'Posting…' : 'Post to Parents')) }}
+          </button>
+        </div>
       </div>
     </form>
   </div>
