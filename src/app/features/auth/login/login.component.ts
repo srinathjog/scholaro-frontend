@@ -2,6 +2,8 @@ import { Component, ChangeDetectorRef, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
 
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -20,13 +22,15 @@ export class LoginComponent implements OnInit {
   loading = false;
   isSuperAdmin = false;
   codeFromUrl = false;
+  schoolName = '';
 
   constructor(
     private fb: FormBuilder,
     public authService: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private http: HttpClient
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -41,6 +45,7 @@ export class LoginComponent implements OnInit {
     if (code) {
       this.loginForm.get('schoolCode')?.setValue(code.toUpperCase());
       this.codeFromUrl = true;
+      this.fetchSchoolName(code);
     }
   }
 
@@ -53,10 +58,26 @@ export class LoginComponent implements OnInit {
     if (this.isSuperAdmin) {
       this.loginForm.get('schoolCode')?.clearValidators();
       this.loginForm.get('schoolCode')?.setValue('');
+      this.schoolName = '';
     } else {
       this.loginForm.get('schoolCode')?.setValidators(Validators.required);
     }
     this.loginForm.get('schoolCode')?.updateValueAndValidity();
+  }
+
+  fetchSchoolName(code: string) {
+    const trimmed = code.trim();
+    if (!trimmed) { this.schoolName = ''; return; }
+    this.http.get<{ name: string }>(`${environment.apiUrl}/tenants/info/${encodeURIComponent(trimmed)}`)
+      .subscribe({
+        next: (res) => { this.schoolName = res.name; this.cdr.markForCheck(); },
+        error: () => { this.schoolName = ''; }
+      });
+  }
+
+  onSchoolCodeBlur() {
+    const code = this.loginForm.get('schoolCode')?.value;
+    if (code) { this.fetchSchoolName(code); }
   }
 
   onSubmit() {

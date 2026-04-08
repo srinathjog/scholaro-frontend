@@ -19,7 +19,18 @@ self.addEventListener('push', function (event) {
     actions: [{ action: 'open', title: 'View' }],
   };
 
-  event.waitUntil(self.registration.showNotification(data.title || 'Scholaro', options));
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Scholaro', options)
+      .then(function () {
+        // Notify all open app windows so they can auto-refresh
+        return clients.matchAll({ type: 'window', includeUncontrolled: true });
+      })
+      .then(function (clientList) {
+        clientList.forEach(function (client) {
+          client.postMessage({ type: 'PUSH_RECEIVED', payload: data });
+        });
+      })
+  );
 });
 
 self.addEventListener('notificationclick', function (event) {

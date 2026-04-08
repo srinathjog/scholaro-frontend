@@ -1,7 +1,8 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild, AfterViewInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
+import { Subscription } from 'rxjs';
 import {
   ParentService,
   ParentChild,
@@ -41,7 +42,14 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   hasNextPage = false;
   loadingMore = false;
   private scrollObserver: IntersectionObserver | null = null;
+  private pushSub?: Subscription;
   @ViewChild('scrollSentinel') scrollSentinel!: ElementRef<HTMLDivElement>;
+
+  // Pull-to-refresh state
+  pullDistance = 0;
+  pullRefreshing = false;
+  private touchStartY = 0;
+  private readonly PULL_THRESHOLD = 80;
 
   // Category display config
   categoryConfig: Record<string, { icon: string; label: string; color: string; bg: string; sentence: Record<string, string> }> = {
@@ -87,6 +95,23 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     this.loadChildren();
     // Register for push notifications (fire-and-forget)
     this.pushService.subscribe().catch(() => {});
+
+    // Auto-refresh timeline when a foreground push arrives
+    this.pushSub = this.pushService.onMessage$.subscribe(() => {
+      if (this.selectedEnrollmentId && this.selectedClassId && this.isToday) {
+        console.log('[Timeline] Foreground push received — auto-refreshing');
+        this.parentService
+          .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
+          .subscribe({
+            next: (result) => {
+              this.timeline = result.items;
+              this.hasNextPage = result.hasNextPage;
+              this.currentPage = 1;
+              this.cdr.detectChanges();
+            },
+          });
+      }
+    });
   }
 
   dismissBanner(): void {
@@ -98,8 +123,69 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     this.setupScrollObserver();
   }
 
+  // ── Pull-to-refresh touch handlers ──
+  @HostListener('touchstart', ['$event'])
+  onTouchStart(e: TouchEvent): void {
+    if (window.scrollY === 0 && !this.pullRefreshing) {
+      this.touchStartY = e.touches[0].clientY;
+    }
+  }
+
+  @HostListener('touchmove', ['$event'])
+  onTouchMove(e: TouchEvent): void {
+    if (!this.touchStartY || this.pullRefreshing) return;
+    if (window.scrollY > 0) { this.touchStartY = 0; this.pullDistance = 0; return; }
+    const delta = e.touches[0].clientY - this.touchStartY;
+    if (delta > 0) {
+      this.pullDistance = Math.min(delta * 0.4, 120);
+      this.cdr.detectChanges();
+    }
+  }
+
+  @HostListener('touchend')
+  onTouchEnd(): void {
+    if (this.pullDistance >= this.PULL_THRESHOLD && !this.pullRefreshing) {
+      this.pullRefreshing = true;
+      this.pullDistance = 60;
+      this.cdr.detectChanges();
+      this.doPullRefresh();
+    } else {
+      this.pullDistance = 0;
+      this.cdr.detectChanges();
+    }
+    this.touchStartY = 0;
+  }
+
+  private doPullRefresh(): void {
+    if (!this.selectedEnrollmentId || !this.selectedClassId) {
+      this.pullRefreshing = false;
+      this.pullDistance = 0;
+      this.cdr.detectChanges();
+      return;
+    }
+    this.parentService
+      .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
+      .subscribe({
+        next: (result) => {
+          this.timeline = result.items;
+          this.hasNextPage = result.hasNextPage;
+          this.currentPage = 1;
+          this.pullRefreshing = false;
+          this.pullDistance = 0;
+          this.cdr.detectChanges();
+          this.setupScrollObserver();
+        },
+        error: () => {
+          this.pullRefreshing = false;
+          this.pullDistance = 0;
+          this.cdr.detectChanges();
+        },
+      });
+  }
+
   ngOnDestroy(): void {
     this.scrollObserver?.disconnect();
+    this.pushSub?.unsubscribe();
   }
 
   /** Wire IntersectionObserver to the sentinel div at the bottom of the feed */

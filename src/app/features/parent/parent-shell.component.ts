@@ -119,6 +119,12 @@ export class ParentShellComponent implements OnInit {
           this.cdr.detectChanges();
         }
       });
+    } else if (this.pushService.isIOS && !this.pushService.isStandalone) {
+      // iOS Safari: show install prompt instead (push won't work without Add to Home Screen)
+      if (!localStorage.getItem('scholaro_install_dismissed')) {
+        this.showInstallBanner = true;
+        this.cdr.detectChanges();
+      }
     } else if (!this.pushService.isIOS) {
       // Android/desktop: auto-subscribe silently
       this.pushService.subscribe();

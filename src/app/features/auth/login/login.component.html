@@ -2,12 +2,11 @@
 <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 py-8 px-2">
   <form [formGroup]="loginForm" (ngSubmit)="onSubmit()"
     class="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 flex flex-col gap-4">
-    <!-- Preschool Logo Placeholder -->
+    <!-- School Name Header -->
     <div class="flex flex-col items-center mb-2">
-      <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-2">
-        <span class="text-3xl text-blue-400 font-bold">Logo</span>
-      </div>
-      <h2 class="text-2xl font-extrabold text-gray-800 mb-1">Welcome to Preschool</h2>
+      <h2 class="text-2xl font-extrabold text-gray-800 mb-1">
+        {{ schoolName ? 'Welcome to ' + schoolName : 'Welcome' }}
+      </h2>
       <p class="text-gray-500 text-sm mb-2">Sign in to your account</p>
     </div>
 
@@ -38,21 +37,10 @@
     <!-- School Code (hidden for Super Admin) -->
     <div *ngIf="!isSuperAdmin">
       <label class="block mb-1 font-medium text-gray-700" for="schoolCode">School Code</label>
-      <div class="relative">
-        <input id="schoolCode" type="text" formControlName="schoolCode"
-          [readonly]="codeFromUrl"
-          class="w-full px-4 py-2 border rounded-lg focus:outline-none transition text-gray-800"
-          [ngClass]="codeFromUrl
-            ? 'bg-green-50 border-green-300 text-green-800 font-semibold cursor-default'
-            : 'bg-gray-50 border-gray-200 focus:ring-2 focus:ring-blue-300'"
-          [class.border-red-400]="schoolCode?.invalid && (schoolCode?.touched || schoolCode?.dirty)">
-        <span *ngIf="codeFromUrl" class="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-xs font-medium flex items-center gap-1">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-          Auto-filled
-        </span>
-      </div>
+      <input id="schoolCode" type="text" formControlName="schoolCode"
+        class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition text-gray-800 bg-gray-50"
+        [class.border-red-400]="schoolCode?.invalid && (schoolCode?.touched || schoolCode?.dirty)"
+        (blur)="onSchoolCodeBlur()">
       <div *ngIf="schoolCode?.invalid && (schoolCode?.touched || schoolCode?.dirty)" class="text-red-500 text-xs mt-1">
         <span *ngIf="schoolCode?.errors?.['required']">School code is required.</span>
       </div>

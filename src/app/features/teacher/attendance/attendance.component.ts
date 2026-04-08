@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import {
   AttendanceService,
@@ -47,6 +48,7 @@ export class AttendanceComponent implements OnInit {
     private dailyLogService: DailyLogService,
     private activityService: ActivityService,
     private authService: AuthService,
+    private router: Router,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -162,9 +164,9 @@ export class AttendanceComponent implements OnInit {
     this.attendanceService.broadcastArrival(this.selectedClassId, this.today).subscribe({
       next: (result) => {
         this.broadcasting = false;
-        this.successMessage = `📣 ${result.notified} parent(s) notified!`;
-        setTimeout(() => { this.successMessage = ''; this.cdr.detectChanges(); }, 4000);
+        this.successMessage = `✅ Attendance shared with ${result.notified} parent(s)!`;
         this.cdr.detectChanges();
+        setTimeout(() => this.router.navigate(['/teacher/home']), 1500);
       },
       error: () => {
         this.errorMessage = 'Failed to send notifications.';
