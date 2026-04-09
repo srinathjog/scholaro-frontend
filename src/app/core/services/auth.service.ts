@@ -26,6 +26,7 @@ export interface CurrentUser {
   tenantId: string;
   token: string;
   isFirstLogin: boolean;
+  schoolName: string;
 }
 
 @Injectable({
@@ -65,10 +66,14 @@ export class AuthService {
             tenantId: payload.tenantId || '',
             token: res.access_token,
             isFirstLogin: payload.isFirstLogin || false,
+            schoolName: res.tenant_name || '',
           };
           // Store real UUID from JWT for subsequent API calls
           if (user.tenantId) {
             this.tenantService.setTenantId(user.tenantId);
+          }
+          if (user.schoolName) {
+            localStorage.setItem('school_name', user.schoolName);
           }
           this.currentUserSubject.next(user);
         }
@@ -82,6 +87,7 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem('school_name');
     this.tenantService.clearTenantId();
     this.currentUserSubject.next(null);
     this.router.navigate(['/login']);
@@ -131,7 +137,14 @@ export class AuthService {
       tenantId: payload.tenantId || '',
       token,
       isFirstLogin: payload.isFirstLogin || false,
+      schoolName: localStorage.getItem('school_name') || '',
     };
+  }
+
+  getSchoolName(): string {
+    return this.currentUserSubject.value?.schoolName
+      || localStorage.getItem('school_name')
+      || '';
   }
 
   changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {

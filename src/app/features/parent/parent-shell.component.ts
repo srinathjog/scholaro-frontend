@@ -5,15 +5,23 @@ import { AuthService } from '../../core/services/auth.service';
 import { PushNotificationService } from '../../core/services/push-notification.service';
 import { PwaService } from '../../core/services/pwa.service';
 import { ParentService } from '../../data/services/parent.service';
+import { SettingsService } from '../../data/services/settings.service';
 
 @Component({
   selector: 'app-parent-shell',
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
+    <!-- ═══ School Branded Header ═══ -->
+    <header class="fixed top-0 inset-x-0 z-40 h-12 flex items-center justify-center shadow-sm safe-area-top"
+            [style.background-color]="primaryColor">
+      <span class="text-white font-bold text-sm tracking-wide truncate max-w-[220px]"
+            [title]="schoolName">{{ schoolName || 'Scholaro' }}</span>
+    </header>
+
     <!-- iOS Push Notification Banner -->
     <div *ngIf="showNotifBanner"
-         class="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg safe-area-top">
+         class="fixed top-12 inset-x-0 z-50 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
           <span class="text-lg">🔔</span>
@@ -36,7 +44,7 @@ import { ParentService } from '../../data/services/parent.service';
 
     <!-- Install Banner -->
     <div *ngIf="showInstallBanner"
-         class="fixed top-0 inset-x-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg safe-area-top">
+         class="fixed top-12 inset-x-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -59,7 +67,7 @@ import { ParentService } from '../../data/services/parent.service';
       </div>
     </div>
 
-    <div class="min-h-screen pb-16" [class.pt-14]="showInstallBanner || showNotifBanner">
+    <div class="min-h-screen pb-16 pt-12" [class.pt-24]="showInstallBanner || showNotifBanner">
       <router-outlet></router-outlet>
     </div>
 
@@ -96,20 +104,34 @@ import { ParentService } from '../../data/services/parent.service';
   `,
   styles: [`
     .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+    .safe-area-top { padding-top: env(safe-area-inset-top, 0); }
   `],
 })
 export class ParentShellComponent implements OnInit {
   private pushService = inject(PushNotificationService);
   private pwaService = inject(PwaService);
   private parentService = inject(ParentService);
+  private settingsService = inject(SettingsService);
   private cdr = inject(ChangeDetectorRef);
 
   showInstallBanner = false;
   showNotifBanner = false;
+  schoolName = '';
+  primaryColor = '#4f46e5';
 
   constructor(private authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
+    // Load school name + branding
+    this.schoolName = this.authService.getSchoolName();
+    this.settingsService.getBranding().subscribe({
+      next: (b) => {
+        if (b.primary_color) this.primaryColor = b.primary_color;
+        this.cdr.detectChanges();
+      },
+      error: () => {},
+    });
+
     // Push notifications: auto-subscribe on Android, show banner on iOS
     if (this.pushService.isIOS && this.pushService.isStandalone) {
       // iOS PWA: needs user gesture — show banner if not already subscribed

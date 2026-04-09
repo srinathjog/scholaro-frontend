@@ -21,9 +21,9 @@ import { filter } from 'rxjs/operators';
         </button>
         <div class="flex items-center gap-2">
           <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <span class="text-sm text-white font-bold">S</span>
+            <span class="text-sm text-white font-bold">{{ schoolInitial }}</span>
           </div>
-          <span class="text-sm font-bold text-gray-900">Scholaro</span>
+          <span class="text-sm font-bold text-gray-900 truncate max-w-[140px]">{{ schoolDisplayName }}</span>
         </div>
       </header>
 
@@ -46,11 +46,11 @@ import { filter } from 'rxjs/operators';
         <!-- Logo -->
         <div class="px-5 py-5 border-b border-gray-100">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <span class="text-base text-white font-bold">S</span>
+            <div class="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center shrink-0">
+              <span class="text-base text-white font-bold">{{ schoolInitial }}</span>
             </div>
-            <div>
-              <p class="text-sm font-bold text-gray-900">Scholaro</p>
+            <div class="min-w-0">
+              <p class="text-sm font-bold text-gray-900 truncate" [title]="schoolName">{{ schoolDisplayName }}</p>
               <p class="text-[10px] text-gray-400 uppercase tracking-wider">School Admin</p>
             </div>
           </div>
@@ -160,6 +160,7 @@ import { filter } from 'rxjs/operators';
             </svg>
             Logout
           </button>
+          <p class="text-[9px] text-gray-300 text-center mt-3 tracking-wide">Powered by Scholaro</p>
         </div>
       </aside>
 
@@ -196,17 +197,28 @@ import { filter } from 'rxjs/operators';
 })
 export class AdminShellComponent {
   sidebarOpen = false;
+  schoolName = '';
 
   constructor(
     private authService: AuthService,
     private router: Router,
   ) {
+    this.schoolName = this.authService.getSchoolName();
     // Auto-close sidebar on navigation (mobile)
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
     ).subscribe(() => {
       this.sidebarOpen = false;
     });
+  }
+
+  get schoolDisplayName(): string {
+    const name = this.schoolName || 'Scholaro';
+    return name.length > 15 ? name.split(' ')[0] : name;
+  }
+
+  get schoolInitial(): string {
+    return (this.schoolName || 'S')[0].toUpperCase();
   }
 
   get sidebarClasses(): string {
