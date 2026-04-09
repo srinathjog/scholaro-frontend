@@ -1,4 +1,19 @@
 <div class="max-w-xl mx-auto px-4 py-6">
+  <!-- Attendance warning banner -->
+  <div *ngIf="attendanceMissing"
+       class="mb-5 rounded-xl bg-amber-50 border border-amber-300 px-5 py-4 flex items-start gap-3 shadow-sm">
+    <span class="text-2xl shrink-0 mt-0.5">⚠️</span>
+    <div class="flex-1">
+      <p class="text-amber-800 font-semibold text-sm">Attendance not marked yet</p>
+      <p class="text-amber-600 text-xs mt-0.5">Please mark attendance before sending updates to parents.</p>
+      <button type="button" (click)="router.navigate(['/teacher/attendance'])"
+              class="mt-2.5 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600
+                     text-white text-xs font-bold transition-colors shadow-sm">
+        ✅ Mark Attendance Now
+      </button>
+    </div>
+  </div>
+
   <!-- Success toast -->
   <div *ngIf="successMessage"
        class="mb-5 rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 flex items-center gap-3 shadow-sm">
@@ -264,7 +279,7 @@
 
           <!-- Post button -->
           <button type="submit"
-                  [disabled]="form.invalid || submitting || compressing"
+                  [disabled]="form.invalid || submitting || compressing || attendanceMissing"
                   class="px-8 py-3 rounded-full text-white font-bold text-sm tracking-wide transition-all duration-200
                          bg-gradient-to-r from-indigo-600 to-purple-600
                          hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg hover:shadow-indigo-200

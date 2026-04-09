@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 // ── DTOs ──
@@ -145,6 +145,13 @@ export class AttendanceService {
       `${this.apiUrl}/attendance/${attendanceId}/checkout`,
       body,
     );
+  }
+
+  /** Check if attendance has been marked for a class today */
+  isAttendanceMarked(classId: string): Observable<boolean> {
+    return this.http
+      .get<{ isMarked: boolean }>(`${this.apiUrl}/attendance/check-today/${classId}`)
+      .pipe(map((res) => res.isMarked));
   }
 
   /** Broadcast "arrived safely" push notification to all present parents */

@@ -8,6 +8,7 @@ import {
 } from '../../../data/services/activity.service';
 import { UploadService } from '../../../core/services/upload.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AttendanceService } from '../../../data/services/attendance.service';
 import { Router } from '@angular/router';
 
 @Component({
@@ -25,6 +26,7 @@ export class CreateActivityComponent implements OnInit {
   submitting = false;
   uploading = false;
   compressing = false;
+  attendanceMissing = false;
   compressionProgress = 0;
   uploadProgress = 0;
   successMessage = '';
@@ -41,7 +43,8 @@ export class CreateActivityComponent implements OnInit {
     private activityService: ActivityService,
     private uploadService: UploadService,
     private authService: AuthService,
-    private router: Router,
+    private attendanceService: AttendanceService,
+    public router: Router,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -51,6 +54,16 @@ export class CreateActivityComponent implements OnInit {
       activity_type: ['moment'],
       title: ['', [Validators.required, Validators.maxLength(255)]],
       description: [''],
+    });
+
+    // Re-check attendance whenever teacher picks a different class
+    this.form.get('class_id')!.valueChanges.subscribe((classId: string) => {
+      if (classId) {
+        this.attendanceService.isAttendanceMarked(classId).subscribe({
+          next: (marked) => { this.attendanceMissing = !marked; this.cdr.detectChanges(); },
+          error: () => { this.attendanceMissing = false; },
+        });
+      }
     });
 
     const user = this.authService['currentUserSubject'].value;

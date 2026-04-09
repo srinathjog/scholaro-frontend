@@ -13,6 +13,8 @@ import {
   TeacherAssignment,
 } from '../../../data/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AttendanceService } from '../../../data/services/attendance.service';
+import { Router } from '@angular/router';
 
 interface QuickAction {
   category: LogCategory;
@@ -71,6 +73,7 @@ export class DailyLogsComponent implements OnInit {
   selectAll = false;
   loading = false;
   saving = false;
+  attendanceMissing = false;
   successMessage = '';
   errorMessage = '';
   viewMode: 'log' | 'summary' = 'log';
@@ -88,6 +91,8 @@ export class DailyLogsComponent implements OnInit {
     private dailyLogService: DailyLogService,
     private activityService: ActivityService,
     private authService: AuthService,
+    private attendanceService: AttendanceService,
+    public router: Router,
     private cdr: ChangeDetectorRef,
   ) {}
 
@@ -117,6 +122,13 @@ export class DailyLogsComponent implements OnInit {
     this.loading = true;
     this.selectedStudentIds.clear();
     this.selectAll = false;
+    this.attendanceMissing = false;
+
+    // Check if attendance is marked for this class today
+    this.attendanceService.isAttendanceMarked(this.selectedClassId).subscribe({
+      next: (marked) => { this.attendanceMissing = !marked; this.cdr.detectChanges(); },
+      error: () => { this.attendanceMissing = false; },
+    });
 
     // Load students and today's logs in parallel
     forkJoin({
