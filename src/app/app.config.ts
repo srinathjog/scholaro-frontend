@@ -10,7 +10,7 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideHttpClient(withInterceptorsFromDi()),
-    importProvidersFrom(CoreModule), provideServiceWorker('ngsw-worker.js', {
+    importProvidersFrom(CoreModule), provideServiceWorker('sw-master.js', {
             enabled: !isDevMode(),
             registrationStrategy: 'registerImmediately'
           }),
