@@ -60,4 +60,11 @@ export class SuperAdminService {
   updateTenantStatus(tenantId: string, status: string): Observable<any> {
     return this.http.patch(`${this.api}/tenants/${tenantId}/status`, { status });
   }
+
+  resetAdminPassword(tenantId: string, newPassword: string): Observable<{ message: string; admin_email: string; admin_name: string }> {
+    return this.http.patch<{ message: string; admin_email: string; admin_name: string }>(
+      `${this.api}/tenants/${tenantId}/reset-admin-password`,
+      { newPassword },
+    );
+  }
 }

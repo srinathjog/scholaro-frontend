@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { SuperAdminService, PlatformStats } from '../../../data/services/super-admin.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Subject, takeUntil } from 'rxjs';
@@ -8,7 +9,7 @@ import { Subject, takeUntil } from 'rxjs';
 @Component({
   selector: 'app-super-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, FormsModule],
   templateUrl: './super-admin-dashboard.component.html',
 })
 export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
@@ -75,5 +76,48 @@ export class SuperAdminDashboardComponent implements OnInit, OnDestroy {
 
   logout(): void {
     this.authService.logout();
+  }
+
+  // ── Reset Admin Password ──
+  resetModal = { open: false, tenantId: '', schoolName: '', newPassword: '', loading: false, result: '', error: '' };
+
+  openResetModal(school: any): void {
+    this.resetModal = {
+      open: true,
+      tenantId: school.id,
+      schoolName: school.name,
+      newPassword: '',
+      loading: false,
+      result: '',
+      error: '',
+    };
+  }
+
+  closeResetModal(): void {
+    this.resetModal = { open: false, tenantId: '', schoolName: '', newPassword: '', loading: false, result: '', error: '' };
+  }
+
+  confirmResetPassword(): void {
+    if (this.resetModal.newPassword.length < 8) {
+      this.resetModal.error = 'Password must be at least 8 characters';
+      return;
+    }
+    this.resetModal.loading = true;
+    this.resetModal.error = '';
+    this.superAdminService
+      .resetAdminPassword(this.resetModal.tenantId, this.resetModal.newPassword)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.resetModal.loading = false;
+          this.resetModal.result = `Password reset for ${res.admin_email} (${res.admin_name})`;
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.resetModal.loading = false;
+          this.resetModal.error = err?.error?.message || 'Failed to reset password';
+          this.cdr.detectChanges();
+        },
+      });
   }
 }
