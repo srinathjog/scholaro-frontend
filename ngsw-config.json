@@ -34,7 +34,9 @@
         "https://api.scholaro.app/parents/me/children",
         "https://api.scholaro.app/activities/feed*",
         "https://api.scholaro.app/daily-logs*",
-        "https://api.scholaro.app/attendance*"
+        "https://api.scholaro.app/attendance*",
+        "https://api.scholaro.app/parents/student/*/fees*",
+        "https://api.scholaro.app/fees*"
       ],
       "cacheConfig": {
         "strategy": "freshness",
@@ -46,7 +48,6 @@
     {
       "name": "api-cached",
       "urls": [
-        "https://api.scholaro.app/parents/student/*/fees*",
         "https://api.scholaro.app/classes*",
         "https://api.scholaro.app/sections*"
       ],
