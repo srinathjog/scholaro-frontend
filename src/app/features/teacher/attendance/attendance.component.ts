@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
+import { todayLocal } from '../../../utils/date.util';
 import {
   AttendanceService,
   AttendanceRecord,
@@ -31,7 +32,7 @@ export class AttendanceComponent implements OnInit {
   records: AttendanceRecord[] = [];
 
   selectedClassId = '';
-  today = new Date().toISOString().slice(0, 10);
+  today = todayLocal();
 
   loading = false;
   saving = new Set<string>(); // enrollment IDs currently saving

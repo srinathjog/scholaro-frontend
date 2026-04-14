@@ -10,6 +10,7 @@ import {
 } from '../../../data/services/parent.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PushNotificationService } from '../../../core/services/push-notification.service';
+import { todayLocal } from '../../../utils/date.util';
 
 @Component({
   selector: 'app-parent-timeline',
@@ -28,7 +29,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   selectedClassId = '';
 
   // Date navigation
-  selectedDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  selectedDate = todayLocal(); // YYYY-MM-DD
 
   // UI state
   loading = false;
@@ -335,7 +336,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   nextDay(): void {
     const d = new Date(this.selectedDate);
     d.setDate(d.getDate() + 1);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayLocal();
     if (d.toISOString().slice(0, 10) <= today) {
       this.selectedDate = d.toISOString().slice(0, 10);
       this.loadTimeline();
@@ -349,7 +350,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
 
   /** Check if selected date is today */
   get isToday(): boolean {
-    return this.selectedDate === new Date().toISOString().slice(0, 10);
+    return this.selectedDate === todayLocal();
   }
 
   /** Format selected date for display */
@@ -358,7 +359,8 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     if (this.isToday) return 'Today';
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    if (this.selectedDate === yesterday.toISOString().slice(0, 10)) return 'Yesterday';
+    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    if (this.selectedDate === yStr) return 'Yesterday';
     return d.toLocaleDateString('en-IN', {
       weekday: 'short',
       day: 'numeric',
@@ -383,7 +385,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
 
   /** Jump back to today */
   jumpToToday(): void {
-    this.selectedDate = new Date().toISOString().slice(0, 10);
+    this.selectedDate = todayLocal();
     this.loadTimeline();
   }
 

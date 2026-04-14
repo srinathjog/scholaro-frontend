@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { todayLocal } from '../../../utils/date.util';
 import {
   FeeService,
   Fee,
@@ -389,7 +390,7 @@ export class FeesComponent implements OnInit {
   }
 
   isOverdue(dueDate: string): boolean {
-    return new Date(dueDate) < new Date(new Date().toISOString().slice(0, 10));
+    return new Date(dueDate) < new Date(todayLocal());
   }
 
   frequencyLabel(f: string): string {

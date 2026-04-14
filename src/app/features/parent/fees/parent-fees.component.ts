@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ParentService, ParentChild } from '../../../data/services/parent.service';
+import { todayLocal } from '../../../utils/date.util';
 import { Fee } from '../../../data/services/fee.service';
 import { environment } from '../../../../environments/environment';
 
@@ -164,7 +165,7 @@ export class ParentFeesComponent implements OnInit {
   }
 
   isOverdue(dueDate: string): boolean {
-    return new Date(dueDate) < new Date(new Date().toISOString().slice(0, 10));
+    return new Date(dueDate) < new Date(todayLocal());
   }
 
   get paymentProgress(): number {

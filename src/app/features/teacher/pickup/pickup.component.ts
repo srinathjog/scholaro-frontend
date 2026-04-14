@@ -2,6 +2,7 @@ import { Component, OnInit, ChangeDetectorRef, ViewChild, ElementRef } from '@an
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
+import { todayLocal } from '../../../utils/date.util';
 import {
   AttendanceService,
   AttendanceRecord,
@@ -39,7 +40,7 @@ export class PickupComponent implements OnInit {
   records: AttendanceRecord[] = [];
 
   selectedClassId = '';
-  today = new Date().toISOString().slice(0, 10);
+  today = todayLocal();
   loading = false;
   successMessage = '';
   errorMessage = '';
@@ -58,6 +59,11 @@ export class PickupComponent implements OnInit {
   private mediaStream: MediaStream | null = null;
 
   pickupPersons = PICKUP_PERSONS;
+
+  // Bulk checkout state
+  selectedIds = new Set<string>();
+  bulkLoading = false;
+  searchQuery = '';
 
   todayFormatted = new Date().toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short',
@@ -115,6 +121,16 @@ export class PickupComponent implements OnInit {
     return this.students.filter((s) => {
       const rec = this.records.find((r) => r.enrollment_id === s.id);
       return rec && (rec.status === 'present' || rec.status === 'late') && !rec.check_out_time;
+    });
+  }
+
+  /** Checked-in students filtered by search query */
+  get filteredCheckedInStudents(): EnrolledStudent[] {
+    if (!this.searchQuery.trim()) return this.checkedInStudents;
+    const q = this.searchQuery.toLowerCase().trim();
+    return this.checkedInStudents.filter((s) => {
+      const name = `${s.student.first_name} ${s.student.last_name}`.toLowerCase();
+      return name.includes(q);
     });
   }
 
@@ -258,5 +274,66 @@ export class PickupComponent implements OnInit {
           this.cdr.detectChanges();
         },
       });
+  }
+
+  // ─── BULK CHECKOUT ───
+
+  toggleSelect(attendanceId: string): void {
+    if (this.selectedIds.has(attendanceId)) {
+      this.selectedIds.delete(attendanceId);
+    } else {
+      this.selectedIds.add(attendanceId);
+    }
+  }
+
+  toggleSelectAll(): void {
+    const eligible = this.checkedInStudents
+      .map(s => this.getRecord(s.id))
+      .filter((r): r is AttendanceRecord => !!r);
+
+    if (this.selectedIds.size === eligible.length) {
+      this.selectedIds.clear();
+    } else {
+      this.selectedIds.clear();
+      eligible.forEach(r => this.selectedIds.add(r.id));
+    }
+  }
+
+  get allSelected(): boolean {
+    const eligible = this.checkedInStudents
+      .map(s => this.getRecord(s.id))
+      .filter(r => !!r);
+    return eligible.length > 0 && this.selectedIds.size === eligible.length;
+  }
+
+  onBulkCheckout(): void {
+    if (this.selectedIds.size === 0 || this.bulkLoading) return;
+    this.bulkLoading = true;
+    this.errorMessage = '';
+
+    this.attendanceService.bulkCheckout(Array.from(this.selectedIds)).subscribe({
+      next: (result) => {
+        this.successMessage = `${result.checkedOut} student${result.checkedOut > 1 ? 's' : ''} handed over to parents! ✅`;
+        this.selectedIds.clear();
+        this.bulkLoading = false;
+        this.onClassChange(); // refresh list
+        setTimeout(() => { this.successMessage = ''; this.cdr.detectChanges(); }, 4000);
+      },
+      error: () => {
+        this.errorMessage = 'Bulk checkout failed. Please try again.';
+        this.bulkLoading = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  /** Open secure photo modal for the single selected student */
+  openModalForSelected(): void {
+    if (this.selectedIds.size !== 1) return;
+    const attendanceId = Array.from(this.selectedIds)[0];
+    const record = this.records.find(r => r.id === attendanceId);
+    if (!record) return;
+    const student = this.students.find(s => s.id === record.enrollment_id);
+    if (student) this.openModal(student);
   }
 }

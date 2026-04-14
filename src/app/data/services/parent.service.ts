@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, map, of, catchError, shareReplay, tap, concat, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Activity } from './activity.service';
+import { todayLocal } from '../../utils/date.util';
 import { DailyLog, LogCategory } from './daily-log.service';
 import { AttendanceRecord } from './attendance.service';
 
@@ -152,7 +153,7 @@ export class ParentService {
     date?: string,
     studentId?: string,
   ): Observable<TimelineResult> {
-    const d = date || new Date().toISOString().slice(0, 10);
+    const d = date || todayLocal();
     const cacheKey = `${enrollmentId}_${classId}_${d}_${studentId || ''}`;
     return this.fetchTimeline$(enrollmentId, classId, d, studentId, cacheKey);
   }

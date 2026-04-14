@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { todayLocal } from '../../utils/date.util';
 
 // ── DTOs ──
 
@@ -104,7 +105,7 @@ export class AttendanceService {
 
   /** Structured daily report: present / absent / checkedOut buckets + summary */
   getDailyReport(classId: string, date?: string): Observable<DailyReport> {
-    const d = date || new Date().toISOString().slice(0, 10);
+    const d = date || todayLocal();
     return this.http.get<DailyReport>(
       `${this.apiUrl}/attendance/report/${classId}`,
       { params: { date: d } },
@@ -113,7 +114,7 @@ export class AttendanceService {
 
   /** Get all attendance records for a class on a given date */
   getAttendanceByClass(classId: string, date?: string): Observable<AttendanceRecord[]> {
-    const d = date || new Date().toISOString().slice(0, 10);
+    const d = date || todayLocal();
     return this.http.get<AttendanceRecord[]>(
       `${this.apiUrl}/attendance/class/${classId}`,
       { params: { date: d } },
@@ -156,10 +157,18 @@ export class AttendanceService {
 
   /** Broadcast "arrived safely" push notification to all present parents */
   broadcastArrival(classId: string, date?: string): Observable<{ notified: number }> {
-    const d = date || new Date().toISOString().slice(0, 10);
+    const d = date || todayLocal();
     return this.http.post<{ notified: number }>(
       `${this.apiUrl}/attendance/broadcast-arrival`,
       { class_id: classId, date: d },
+    );
+  }
+
+  /** Bulk checkout: hand over multiple students at once */
+  bulkCheckout(attendanceIds: string[]): Observable<{ checkedOut: number; notified: number }> {
+    return this.http.post<{ checkedOut: number; notified: number }>(
+      `${this.apiUrl}/attendance/bulk-checkout`,
+      { attendance_ids: attendanceIds },
     );
   }
 }

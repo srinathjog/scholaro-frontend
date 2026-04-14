@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { todayLocal } from '../../utils/date.util';
 
 export type LogCategory = 'meal' | 'nap' | 'potty' | 'mood' | 'health';
 
@@ -80,7 +81,7 @@ export class DailyLogService {
 
   /** Get all logs for a class on a given date */
   getTodaysLogs(classId: string, date?: string): Observable<DailyLog[]> {
-    const d = date || new Date().toISOString().slice(0, 10);
+    const d = date || todayLocal();
     return this.http.get<DailyLog[]>(
       `${this.apiUrl}/daily-logs/class/${classId}`,
       { params: { date: d } },
@@ -89,7 +90,7 @@ export class DailyLogService {
 
   /** Get logs for a specific student on a given date */
   getStudentLogs(enrollmentId: string, date?: string): Observable<DailyLog[]> {
-    const d = date || new Date().toISOString().slice(0, 10);
+    const d = date || todayLocal();
     return this.http.get<DailyLog[]>(
       `${this.apiUrl}/daily-logs/student/${enrollmentId}`,
       { params: { date: d } },
