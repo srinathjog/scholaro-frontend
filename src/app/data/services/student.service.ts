@@ -12,6 +12,8 @@ export interface Student {
   gender: string;
   status: string;
   created_at: string;
+  current_class: string | null;
+  current_section: string | null;
 }
 
 export interface ParentInfo {
@@ -29,6 +31,7 @@ export interface StudentDetail extends Student {
     section_id: string;
     className: string | null;
     status: string;
+    custom_fee_amount: string | null;
   }>;
 }
 
@@ -74,5 +77,11 @@ export class StudentService {
     data: { name: string; email: string; phone?: string; relationship: string },
   ): Observable<ParentInfo> {
     return this.http.post<ParentInfo>(`${this.api}/${studentId}/parents/create`, data);
+  }
+
+  updateCustomFee(enrollmentId: string, customFeeAmount: string | null): Observable<any> {
+    return this.http.patch(`${environment.apiUrl}/enrollments/${enrollmentId}/custom-fee`, {
+      custom_fee_amount: customFeeAmount,
+    });
   }
 }

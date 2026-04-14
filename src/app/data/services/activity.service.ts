@@ -53,12 +53,12 @@ export class ActivityService {
     });
   }
 
-  getClassesByTeacher(teacherId: string): Observable<TeacherAssignment[]> {
+  getClassesByTeacher(teacherId: string, forceRefresh = false): Observable<TeacherAssignment[]> {
     const fresh$ = this.http.get<TeacherAssignment[]>(
       `${this.apiUrl}/teacher-assignments/teacher/${teacherId}`
     ).pipe(tap(data => this._classesCache = data));
 
-    if (this._classesCache) {
+    if (this._classesCache && !forceRefresh) {
       // Return cache instantly, refresh in background for next time
       fresh$.subscribe();
       return of(this._classesCache);

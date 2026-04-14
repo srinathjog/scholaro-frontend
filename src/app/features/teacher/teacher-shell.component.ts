@@ -110,7 +110,26 @@ import { filter, take } from 'rxjs/operators';
       </aside>
 
       <!-- Main Content -->
-      <main class="lg:ml-60 pt-14 lg:pt-0 min-h-screen">
+      <main class="lg:ml-60 pt-14 lg:pt-0 min-h-screen"
+            (touchstart)="onTouchStart($event)"
+            (touchmove)="onTouchMove($event)"
+            (touchend)="onTouchEnd()">
+
+        <!-- Pull-to-Refresh Indicator -->
+        <div *ngIf="pullDistance > 0 || refreshing"
+             class="flex items-center justify-center transition-all duration-200"
+             [style.height.px]="refreshing ? 48 : pullDistance">
+          <svg *ngIf="!refreshing" class="w-5 h-5 text-teal-500 transition-transform duration-150"
+               [class.rotate-180]="pullDistance >= pullThreshold"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+          </svg>
+          <svg *ngIf="refreshing" class="animate-spin w-5 h-5 text-teal-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+        </div>
+
         <router-outlet></router-outlet>
       </main>
     </div>
@@ -132,6 +151,10 @@ import { filter, take } from 'rxjs/operators';
 export class TeacherShellComponent implements OnInit {
   sidebarOpen = false;
   schoolName = '';
+  refreshing = false;
+  pullDistance = 0;
+  pullThreshold = 60;
+  private touchStartY = 0;
 
   constructor(
     private authService: AuthService,
@@ -147,7 +170,7 @@ export class TeacherShellComponent implements OnInit {
   ngOnInit(): void {
     this.authService.currentUser$.pipe(take(1)).subscribe(user => {
       if (user?.userId) {
-        this.activityService.getClassesByTeacher(user.userId).subscribe();
+        this.activityService.getClassesByTeacher(user.userId, true).subscribe();
       }
     });
   }
@@ -172,6 +195,42 @@ export class TeacherShellComponent implements OnInit {
 
   @HostListener('document:keydown.escape')
   onEscapeKey(): void { this.sidebarOpen = false; }
+
+  onTouchStart(e: TouchEvent): void {
+    if (window.scrollY === 0) {
+      this.touchStartY = e.touches[0].clientY;
+    }
+  }
+
+  onTouchMove(e: TouchEvent): void {
+    if (this.refreshing || this.touchStartY === 0) return;
+    const delta = e.touches[0].clientY - this.touchStartY;
+    if (delta > 0 && window.scrollY === 0) {
+      this.pullDistance = Math.min(delta * 0.5, 80);
+    }
+  }
+
+  onTouchEnd(): void {
+    if (this.pullDistance >= this.pullThreshold) {
+      this.refreshData();
+    }
+    this.pullDistance = 0;
+    this.touchStartY = 0;
+  }
+
+  refreshData(): void {
+    this.refreshing = true;
+    this.authService.currentUser$.pipe(take(1)).subscribe(user => {
+      if (user?.userId) {
+        this.activityService.getClassesByTeacher(user.userId, true).subscribe({
+          next: () => this.refreshing = false,
+          error: () => this.refreshing = false,
+        });
+      } else {
+        this.refreshing = false;
+      }
+    });
+  }
 
   logout(): void {
     this.authService.logout();

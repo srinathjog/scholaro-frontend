@@ -63,7 +63,7 @@ export class FeesComponent implements OnInit {
     amount: '',
     due_date: '',
     class_id: '',
-    frequency: 'one_time' as 'one_time' | 'monthly' | 'quarterly' | 'yearly',
+    frequency: 'one_time' as 'one_time' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly',
   };
   creating = false;
 
@@ -96,7 +96,7 @@ export class FeesComponent implements OnInit {
       next: (classes) => {
         this.classes = classes.map((c) => ({ id: c.id, name: c.name }));
         this.loadingClasses = false;
-        if (this.classes.length === 1) {
+        if (this.classes.length > 0) {
           this.selectedClassId = this.classes[0].id;
           this.loadDashboard();
         }
@@ -397,6 +397,7 @@ export class FeesComponent implements OnInit {
       case 'one_time': return 'One-Time';
       case 'monthly': return 'Monthly';
       case 'quarterly': return 'Quarterly';
+      case 'half_yearly': return 'Half-Yearly';
       case 'yearly': return 'Yearly';
       default: return f;
     }
@@ -407,6 +408,7 @@ export class FeesComponent implements OnInit {
       case 'one_time': return 'text-gray-700 bg-gray-50 border-gray-200';
       case 'monthly': return 'text-blue-700 bg-blue-50 border-blue-200';
       case 'quarterly': return 'text-violet-700 bg-violet-50 border-violet-200';
+      case 'half_yearly': return 'text-teal-700 bg-teal-50 border-teal-200';
       case 'yearly': return 'text-amber-700 bg-amber-50 border-amber-200';
       default: return 'text-gray-700 bg-gray-50 border-gray-200';
     }

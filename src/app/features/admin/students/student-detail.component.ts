@@ -39,6 +39,10 @@ export class StudentDetailComponent implements OnInit {
   saving = false;
   successMessage = '';
 
+  // Custom fee
+  savingFeeId = '';
+  feeEdits: Record<string, string> = {};
+
   private cdr = inject(ChangeDetectorRef);
   private studentId = '';
 
@@ -146,5 +150,29 @@ export class StudentDetailComponent implements OnInit {
     this.newParentEmail = '';
     this.newParentPhone = '';
     this.newParentRelationship = 'father';
+  }
+
+  onFeeChange(enrollment: { id: string }, value: string): void {
+    this.feeEdits[enrollment.id] = value;
+  }
+
+  saveCustomFee(enrollment: { id: string; custom_fee_amount: string | null }): void {
+    const value = this.feeEdits[enrollment.id] ?? enrollment.custom_fee_amount;
+    this.savingFeeId = enrollment.id;
+    this.studentService
+      .updateCustomFee(enrollment.id, value || null)
+      .subscribe({
+        next: () => {
+          enrollment.custom_fee_amount = value || null;
+          this.savingFeeId = '';
+          this.successMessage = 'Custom fee updated!';
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          this.error = err.error?.message || 'Failed to update fee';
+          this.savingFeeId = '';
+          this.cdr.detectChanges();
+        },
+      });
   }
 }

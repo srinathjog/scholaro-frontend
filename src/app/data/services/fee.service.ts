@@ -14,7 +14,7 @@ export interface FeeStructure {
   description?: string;
   amount: number;
   due_date: string;
-  frequency: 'one_time' | 'monthly' | 'quarterly' | 'yearly';
+  frequency: 'one_time' | 'monthly' | 'quarterly' | 'half_yearly' | 'yearly';
   created_at: string;
 }
 

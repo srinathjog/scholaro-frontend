@@ -5,8 +5,19 @@
       <p class="text-sm text-gray-500 mt-1">All enrolled students in your school</p>
     </div>
     <span class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg">
-      {{ students.length }} total
+      {{ filteredStudents.length }}<span *ngIf="classFilter"> / {{ students.length }}</span> students
     </span>
+  </div>
+
+  <!-- Filter Bar -->
+  <div *ngIf="!loading && students.length > 0" class="mb-4 flex items-center gap-3">
+    <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filter by Class</label>
+    <select [(ngModel)]="classFilter"
+            class="w-auto pr-8 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm">
+      <option value="">All Classes</option>
+      <option *ngFor="let c of classNames" [value]="c">{{ c }}</option>
+    </select>
+    <button *ngIf="classFilter" (click)="classFilter = ''" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Clear</button>
   </div>
 
   <!-- Loading -->
@@ -39,18 +50,24 @@
         <tr>
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
+          <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Class / Section</th>
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Gender</th>
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">DOB</th>
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-          <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Added</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100">
-        <tr *ngFor="let s of students; let i = index"
+        <tr *ngFor="let s of filteredStudents; let i = index"
             [routerLink]="['/admin/students', s.id]"
             class="hover:bg-gray-50/50 transition-colors cursor-pointer">
           <td class="px-5 py-3.5 text-gray-400 font-mono text-xs">{{ i + 1 }}</td>
           <td class="px-5 py-3.5 font-medium text-gray-900">{{ s.first_name }} {{ s.last_name }}</td>
+          <td class="px-5 py-3.5">
+            <span *ngIf="s.current_class" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+              {{ s.current_class }}<span *ngIf="s.current_section" class="text-indigo-400 mx-1">·</span><span *ngIf="s.current_section">{{ s.current_section }}</span>
+            </span>
+            <span *ngIf="!s.current_class" class="text-gray-300 text-xs">—</span>
+          </td>
           <td class="px-5 py-3.5 text-gray-600 capitalize">{{ s.gender }}</td>
           <td class="px-5 py-3.5 text-gray-600">{{ s.date_of_birth | date:'mediumDate' }}</td>
           <td class="px-5 py-3.5">
@@ -59,7 +76,6 @@
               {{ s.status }}
             </span>
           </td>
-          <td class="px-5 py-3.5 text-gray-400 text-xs">{{ s.created_at | date:'mediumDate' }}</td>
         </tr>
       </tbody>
     </table>

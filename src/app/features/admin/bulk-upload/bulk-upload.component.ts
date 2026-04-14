@@ -1,5 +1,6 @@
 import { Component, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { BulkImportService, BulkImportResult } from '../../../data/services/bulk-import.service';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -22,6 +23,7 @@ export class BulkUploadComponent {
   constructor(
     private bulkImportService: BulkImportService,
     private authService: AuthService,
+    private router: Router,
   ) {
     const user = this.authService.currentUser$;
     this.tenantId = '';
@@ -59,6 +61,8 @@ export class BulkUploadComponent {
         this.result = res;
         this.uploading = false;
         this.cdr.detectChanges();
+        // Navigate to Classes page after short delay so user sees success
+        setTimeout(() => this.router.navigate(['/admin/classes']), 1500);
       },
       error: (err) => {
         this.error = err.error?.message || 'Upload failed. Check your file format and try again.';

@@ -471,8 +471,8 @@
         </div>
         <div>
           <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Frequency</label>
-          <div class="grid grid-cols-4 gap-1.5">
-            <button *ngFor="let freq of ['one_time', 'monthly', 'quarterly', 'yearly']"
+          <div class="grid grid-cols-5 gap-1.5">
+            <button *ngFor="let freq of ['one_time', 'monthly', 'quarterly', 'half_yearly', 'yearly']"
                     (click)="createForm.frequency = $any(freq)"
                     class="py-2 rounded-lg text-[10px] font-semibold border transition-all text-center"
                     [ngClass]="createForm.frequency === freq
