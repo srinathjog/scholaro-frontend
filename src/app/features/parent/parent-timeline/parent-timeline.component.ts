@@ -2,7 +2,8 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild,
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, interval } from 'rxjs';
+import { filter, switchMap } from 'rxjs/operators';
 import {
   ParentService,
   ParentChild,
@@ -45,6 +46,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   loadingMore = false;
   private scrollObserver: IntersectionObserver | null = null;
   private pushSub?: Subscription;
+  private pollSub?: Subscription;
   @ViewChild('scrollSentinel') scrollSentinel!: ElementRef<HTMLDivElement>;
 
   // Pull-to-refresh state
@@ -114,6 +116,23 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
           });
       }
     });
+
+    // Silent 60-second polling — only when viewing today & tab is visible
+    this.pollSub = interval(60_000)
+      .pipe(
+        filter(() => this.isToday && !!this.selectedEnrollmentId && !!this.selectedClassId && document.visibilityState === 'visible'),
+        switchMap(() =>
+          this.parentService.refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id),
+        ),
+      )
+      .subscribe({
+        next: (result) => {
+          this.timeline = result.items;
+          this.hasNextPage = result.hasNextPage;
+          this.currentPage = 1;
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   dismissBanner(): void {
@@ -188,6 +207,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   ngOnDestroy(): void {
     this.scrollObserver?.disconnect();
     this.pushSub?.unsubscribe();
+    this.pollSub?.unsubscribe();
   }
 
   /** Wire IntersectionObserver to the sentinel div at the bottom of the feed */

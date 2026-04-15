@@ -40,6 +40,11 @@ export class AttendanceComponent implements OnInit {
   successMessage = '';
   errorMessage = '';
 
+  // Completion state: prevents duplicate broadcasts
+  isAlreadyMarked = false;
+  editMode = false;
+  broadcastSent = false;
+
   todayFormatted = new Date().toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short',
   });
@@ -82,6 +87,12 @@ export class AttendanceComponent implements OnInit {
         this.students = students;
         this.records = records;
         this.loading = false;
+
+        // Detect completion: if every student already has a record, lock the UI
+        this.isAlreadyMarked = students.length > 0 && records.length >= students.length;
+        this.editMode = false;
+        this.broadcastSent = this.isBroadcastSent();
+
         this.cdr.detectChanges();
       },
       error: () => {
@@ -158,16 +169,20 @@ export class AttendanceComponent implements OnInit {
 
   /** Broadcast "arrived safely" to all present students' parents */
   broadcastArrival(): void {
-    if (this.broadcasting) return;
+    if (this.broadcasting || this.broadcastSent) return;
     this.broadcasting = true;
     this.errorMessage = '';
 
     this.attendanceService.broadcastArrival(this.selectedClassId, this.today).subscribe({
       next: (result) => {
         this.broadcasting = false;
+        this.broadcastSent = true;
+        this.markBroadcastSent();
         this.successMessage = `✅ Attendance shared with ${result.notified} parent(s)!`;
+        this.isAlreadyMarked = true;
+        this.editMode = false;
         this.cdr.detectChanges();
-        setTimeout(() => this.router.navigate(['/teacher/home']), 1500);
+        // Don't navigate away — show the summary
       },
       error: () => {
         this.errorMessage = 'Failed to send notifications.';
@@ -209,5 +224,47 @@ export class AttendanceComponent implements OnInit {
 
   isSaving(enrollmentId: string): boolean {
     return this.saving.has(enrollmentId);
+  }
+
+  /** Enter edit mode to allow corrections */
+  enterEditMode(): void {
+    this.editMode = true;
+    this.cdr.detectChanges();
+  }
+
+  /** Check if broadcast was already sent today for this class */
+  private isBroadcastSent(): boolean {
+    return localStorage.getItem(this.broadcastKey) === 'true';
+  }
+
+  /** Persist broadcast state for today */
+  private markBroadcastSent(): void {
+    localStorage.setItem(this.broadcastKey, 'true');
+  }
+
+  private get broadcastKey(): string {
+    return `broadcast_${this.selectedClassId}_${this.today}`;
+  }
+
+  /** Students grouped by status for summary view */
+  get presentStudents(): EnrolledStudent[] {
+    return this.students.filter(s => this.getStatus(s.id) === 'present');
+  }
+
+  get absentStudents(): EnrolledStudent[] {
+    return this.students.filter(s => this.getStatus(s.id) === 'absent');
+  }
+
+  get lateStudents(): EnrolledStudent[] {
+    return this.students.filter(s => this.getStatus(s.id) === 'late');
+  }
+
+  get leaveStudents(): EnrolledStudent[] {
+    return this.students.filter(s => this.getStatus(s.id) === 'leave');
+  }
+
+  /** Whether to show the locked summary view (not edit mode) */
+  get showSummary(): boolean {
+    return this.isAlreadyMarked && !this.editMode;
   }
 }

@@ -264,6 +264,9 @@ export class PickupComponent implements OnInit {
           this.successMessage = `${name} picked up by ${this.resolvedPickupName} ✅`;
           setTimeout(() => { this.successMessage = ''; this.cdr.detectChanges(); }, 4000);
 
+          // Remove from bulk selection if selected
+          this.selectedIds.delete(updated.id);
+
           this.confirming = false;
           this.closeModal();
           this.cdr.detectChanges();
@@ -314,9 +317,16 @@ export class PickupComponent implements OnInit {
     this.attendanceService.bulkCheckout(Array.from(this.selectedIds)).subscribe({
       next: (result) => {
         this.successMessage = `${result.checkedOut} student${result.checkedOut > 1 ? 's' : ''} handed over to parents! ✅`;
+
+        // Update local records: stamp check_out_time so students disappear from list instantly
+        const now = new Date().toISOString();
+        for (const id of this.selectedIds) {
+          const rec = this.records.find(r => r.id === id);
+          if (rec) rec.check_out_time = now;
+        }
         this.selectedIds.clear();
         this.bulkLoading = false;
-        this.onClassChange(); // refresh list
+        this.cdr.detectChanges();
         setTimeout(() => { this.successMessage = ''; this.cdr.detectChanges(); }, 4000);
       },
       error: () => {

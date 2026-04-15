@@ -91,6 +91,15 @@ import { SettingsService } from '../../data/services/settings.service';
           <span class="text-[10px] font-semibold">Fees</span>
         </a>
 
+        <a href="https://wa.me/919538004593?text=Hi%20Scholaro%20Team%2C%20I%20need%20help%20with..."
+           target="_blank" rel="noopener noreferrer"
+           class="flex flex-col items-center gap-0.5 px-3 py-1.5 text-gray-400 hover:text-green-600 transition-colors">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.82 13.81c-.25.7-1.47 1.35-2.03 1.43-.5.07-1.13.1-1.83-.12-.42-.13-.96-.31-1.65-.6-2.9-1.25-4.78-4.18-4.93-4.37-.14-.2-1.17-1.56-1.17-2.97 0-1.42.74-2.11 1.01-2.4.25-.27.56-.34.75-.34.19 0 .37 0 .54.01.17.01.4-.07.63.48.24.56.8 1.97.87 2.11.07.15.12.32.02.51-.09.2-.14.31-.27.48-.14.17-.29.37-.42.5-.14.14-.28.29-.12.56.16.28.71 1.17 1.53 1.9 1.05.93 1.93 1.22 2.21 1.36.27.14.43.12.59-.07.16-.2.68-.79.86-1.07.18-.27.36-.23.61-.14.25.1 1.58.74 1.85.88.27.14.46.2.52.31.07.12.07.66-.18 1.35z"/>
+          </svg>
+          <span class="text-[10px] font-semibold">Support</span>
+        </a>
+
         <button (click)="logout()"
                 class="flex flex-col items-center gap-0.5 px-3 py-1.5 text-gray-400 hover:text-red-500 transition-colors">
           <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

@@ -19,21 +19,27 @@ html {
 }
 
 body {
-  // Default the application to a light color theme. This can be changed to
-  // `dark` to enable the dark color theme, or to `light dark` to defer to the
-  // user's system settings.
+  // Force light appearance regardless of the user's OS dark-mode setting.
+  // All our Tailwind classes assume a light palette — this prevents
+  // transparent / mismatched backgrounds on dark-mode phones.
   color-scheme: light;
 
-  // Set a default background, font and text colors for the application using
-  // Angular Material's system-level CSS variables. Learn more about these
-  // variables at https://material.angular.dev/guide/system-variables
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
+  background-color: #ffffff;
+  color: #1e293b; // slate-800
   font: var(--mat-sys-body-medium);
 
   // Reset the user agent margin.
   margin: 0;
   height: 100%;
+}
+
+// Safety net: if a browser still honours prefers-color-scheme despite
+// color-scheme:light, force our light palette explicitly.
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+  }
 }
 /* You can add global styles to this file, and also import other style files */
 

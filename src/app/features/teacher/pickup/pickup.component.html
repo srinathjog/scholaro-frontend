@@ -138,10 +138,20 @@
 
   <!-- ═══ ALL GONE BANNER ═══ -->
   <div *ngIf="checkedInStudents.length === 0 && checkedOutStudents.length > 0"
-       class="mx-4 mt-6 bg-emerald-600 text-white rounded-2xl p-5 text-center shadow-xl">
-    <p class="text-3xl mb-2">🎉</p>
-    <p class="text-base font-bold">All students picked up!</p>
-    <p class="text-sm text-emerald-100 mt-1">{{ checkedOutStudents.length }} secure handovers completed today.</p>
+       class="mx-4 mt-6 rounded-3xl p-6 text-center shadow-2xl overflow-hidden relative
+              bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500">
+    <!-- Decorative blobs -->
+    <div class="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full"></div>
+    <div class="absolute -bottom-6 -left-6 w-24 h-24 bg-white/10 rounded-full"></div>
+    <div class="relative z-10">
+      <p class="text-5xl mb-3">🎉</p>
+      <h3 class="text-xl font-extrabold text-white leading-tight">
+        All students have been<br>safely picked up!
+      </h3>
+      <p class="text-emerald-100 text-sm mt-2 font-medium">
+        {{ checkedOutStudents.length }} secure handover{{ checkedOutStudents.length > 1 ? 's' : '' }} completed today. Great job! 🌟
+      </p>
+    </div>
   </div>
 
   <!-- ═══ CHECKED OUT LIST ═══ -->
