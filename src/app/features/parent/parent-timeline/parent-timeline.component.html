@@ -251,7 +251,7 @@
                 {{ getStatusConfig(item).label }}
               </span>
               <span class="text-[10px] text-gray-400 font-medium text-right">
-                {{ item.created_at | date:'shortTime' }}
+                {{ item.created_at | timeAgo }}
               </span>
             </div>
           </div>
@@ -328,7 +328,7 @@
                    'text-emerald-500': item.category === 'health'
                  }">
                 {{ categoryConfig[item.category!]?.label }}
-                · {{ item.created_at | date:'shortTime' }}
+                · {{ item.created_at | timeAgo }}
               </p>
             </div>
           </div>

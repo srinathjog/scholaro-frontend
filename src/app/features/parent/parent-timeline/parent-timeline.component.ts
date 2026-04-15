@@ -11,11 +11,12 @@ import {
 import { AuthService } from '../../../core/services/auth.service';
 import { PushNotificationService } from '../../../core/services/push-notification.service';
 import { todayLocal } from '../../../utils/date.util';
+import { TimeAgoPipe } from '../../../shared/pipes/time-ago.pipe';
 
 @Component({
   selector: 'app-parent-timeline',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, TimeAgoPipe],
   templateUrl: './parent-timeline.component.html',
 })
 export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit {
