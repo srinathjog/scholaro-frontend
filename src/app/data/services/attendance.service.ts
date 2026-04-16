@@ -69,6 +69,14 @@ export interface AttendanceRecord {
   };
 }
 
+export interface MonthlyAttendanceSummary {
+  studentName: string;
+  totalDays: number;
+  presentCount: number;
+  absentCount: number;
+  percentage: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AttendanceService {
   private readonly apiUrl = environment.apiUrl;
@@ -125,6 +133,14 @@ export class AttendanceService {
   getAttendanceByStudent(enrollmentId: string): Observable<AttendanceRecord[]> {
     return this.http.get<AttendanceRecord[]>(
       `${this.apiUrl}/attendance/student/${enrollmentId}`,
+    );
+  }
+
+  /** Monthly attendance summary for a class and month */
+  getMonthlyReport(classId: string, month: string, year: string): Observable<MonthlyAttendanceSummary[]> {
+    return this.http.get<MonthlyAttendanceSummary[]>(
+      `${this.apiUrl}/attendance/report/monthly/${classId}`,
+      { params: { month, year } },
     );
   }
 

@@ -73,7 +73,15 @@ export class ActivityService {
     );
   }
 
+  getActivityById(id: string): Observable<Activity> {
+    return this.http.get<Activity>(`${this.apiUrl}/activities/${id}`);
+  }
+
   deleteActivity(id: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/activities/${id}`);
+  }
+
+  updateActivity(id: string, data: Partial<{ title: string; description: string; class_id: string; section_id: string }>): Observable<Activity> {
+    return this.http.patch<Activity>(`${this.apiUrl}/activities/${id}`, data);
   }
 }

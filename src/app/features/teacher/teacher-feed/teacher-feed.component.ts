@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { ActivityService, Activity } from '../../../data/services/activity.service';
 import { AuthService } from '../../../core/services/auth.service';
 
@@ -15,6 +15,7 @@ export class TeacherFeedComponent implements OnInit {
   loading = true;
   errorMessage = '';
   deletingId: string | null = null;
+  menuOpenId: string | null = null;
 
   private userId = '';
   private tenantId = '';
@@ -22,7 +23,8 @@ export class TeacherFeedComponent implements OnInit {
   constructor(
     private activityService: ActivityService,
     private authService: AuthService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router,
   ) {}
 
   ngOnInit(): void {
@@ -53,17 +55,23 @@ export class TeacherFeedComponent implements OnInit {
   }
 
   deleteActivity(id: string): void {
-    if (!confirm('Delete this post? Parents will no longer see it.')) return;
-
     this.deletingId = id;
     this.activityService.deleteActivity(id).subscribe({
       next: () => {
-        this.activities = this.activities.filter((a) => a.id !== id);
+        this.activities = this.activities.filter(activity => activity.id !== id);
+        this.toastMessage = '✅ Post removed.';
+        this.showToast = true;
+        setTimeout(() => {
+          this.showToast = false;
+          this.cdr.detectChanges();
+        }, 3000);
         this.deletingId = null;
+        this.cdr.detectChanges();
       },
       error: () => {
         this.errorMessage = 'Failed to delete post. Please try again.';
         this.deletingId = null;
+        this.cdr.detectChanges();
       },
     });
   }
@@ -80,4 +88,26 @@ export class TeacherFeedComponent implements OnInit {
     if (days < 7) return `${days}d ago`;
     return new Date(dateStr).toLocaleDateString();
   }
+
+  openMenu(id: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.menuOpenId = id;
+  }
+
+  closeMenu(): void {
+    this.menuOpenId = null;
+  }
+
+  editActivity(id: string): void {
+    this.router.navigate(['/teacher/edit', id]);
+    this.closeMenu();
+  }
+
+  // Add this to close menu on outside click
+  ngAfterViewInit(): void {
+    window.addEventListener('click', () => this.closeMenu());
+  }
+
+  showToast = false;
+  toastMessage = '';
 }

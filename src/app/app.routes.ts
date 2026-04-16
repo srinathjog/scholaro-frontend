@@ -1,4 +1,3 @@
-
 import { Routes } from '@angular/router';
 import { RoleGuard } from './core/guards/role.guard';
 import { loginGuard } from './core/guards/login.guard';
@@ -83,6 +82,11 @@ export const routes: Routes = [
 				title: 'School Structure',
 			},
 			{
+				path: 'reports/attendance',
+				loadComponent: () => import('./features/admin/reports/attendance-report.component').then(m => m.AttendanceReportComponent),
+				title: 'Attendance Reports',
+			},
+			{
 				path: 'teacher-assignments',
 				loadComponent: () => import('./features/admin/academic/teacher-assignment.component').then(m => m.TeacherAssignmentComponent),
 				title: 'Staff Assignment',
@@ -120,6 +124,11 @@ export const routes: Routes = [
 				path: 'create',
 				loadComponent: () => import('./features/teacher/create-activity/create-activity.component').then(m => m.CreateActivityComponent),
 				title: 'Create Activity',
+			},
+			{
+				path: 'edit/:activityId',
+				loadComponent: () => import('./features/teacher/create-activity/create-activity.component').then(m => m.CreateActivityComponent),
+				title: 'Edit Activity',
 			},
 			{
 				path: 'history',

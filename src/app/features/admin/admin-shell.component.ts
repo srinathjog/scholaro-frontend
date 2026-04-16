@@ -121,6 +121,15 @@ import { filter } from 'rxjs/operators';
             Classes
           </a>
 
+          <a routerLink="/admin/reports/attendance" routerLinkActive="bg-indigo-50 text-indigo-700"
+             (click)="onNavClick()"
+             class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v8m4-4H8m10-5H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2z" />
+            </svg>
+            Reports
+          </a>
+
           <a routerLink="/admin/teacher-assignments" routerLinkActive="bg-indigo-50 text-indigo-700"
              (click)="onNavClick()"
              class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">

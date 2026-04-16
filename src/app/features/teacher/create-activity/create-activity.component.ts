@@ -9,7 +9,7 @@ import {
 import { UploadService } from '../../../core/services/upload.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AttendanceService } from '../../../data/services/attendance.service';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-create-activity',
@@ -38,6 +38,10 @@ export class CreateActivityComponent implements OnInit {
     { value: 'curriculum', label: 'Learning Update 📖' },
   ];
 
+  isEditMode = false;
+  activityId: string | null = null;
+  isDataLoading = false;
+
   constructor(
     private fb: FormBuilder,
     private activityService: ActivityService,
@@ -46,6 +50,7 @@ export class CreateActivityComponent implements OnInit {
     private attendanceService: AttendanceService,
     public router: Router,
     private cdr: ChangeDetectorRef,
+    private route: ActivatedRoute,
   ) {}
 
   ngOnInit(): void {
@@ -56,12 +61,23 @@ export class CreateActivityComponent implements OnInit {
       description: [''],
     });
 
-    // Re-check attendance whenever teacher picks a different class
-    this.form.get('class_id')!.valueChanges.subscribe((classId: string) => {
-      if (classId) {
-        this.attendanceService.isAttendanceMarked(classId).subscribe({
-          next: (marked) => { this.attendanceMissing = !marked; this.cdr.detectChanges(); },
-          error: () => { this.attendanceMissing = false; },
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('activityId') || params.get('id');
+      if (id) {
+        this.isEditMode = true;
+        this.activityId = id;
+        this.isDataLoading = true;
+        this.activityService.getActivityById(id).subscribe(act => {
+          this.form.patchValue({
+            class_id: act.class_id,
+            activity_type: act.activity_type,
+            title: act.title,
+            description: act.description || '',
+          });
+          this.previews = act.media.map(m => m.media_url);
+          this.selectedFiles = [];
+          this.isDataLoading = false;
+          this.cdr.detectChanges();
         });
       }
     });
@@ -158,6 +174,33 @@ export class CreateActivityComponent implements OnInit {
         this.uploading = false;
       }
 
+      if (this.isEditMode && this.activityId) {
+        const patch: any = {
+          class_id: this.form.value.class_id,
+          title: this.form.value.title,
+          description: this.form.value.description || undefined,
+          activity_type: this.form.value.activity_type || 'moment',
+        };
+        if (mediaUrls.length) patch.media_urls = mediaUrls;
+        this.activityService.updateActivity(this.activityId, patch).subscribe({
+          next: () => {
+            this.successMessage = 'Post updated ✓';
+            this.cdr.detectChanges();
+            setTimeout(() => this.router.navigate(['/teacher/history']), 1200);
+          },
+          error: (err) => {
+            this.errorMessage = err?.error?.message || 'Failed to update activity. Please try again.';
+            this.cdr.detectChanges();
+          },
+          complete: () => {
+            this.submitting = false;
+            this.cdr.detectChanges();
+          },
+        });
+        return;
+      }
+
+      // POST: Create new activity
       const payload: CreateActivityDto = {
         class_id: this.form.value.class_id,
         title: this.form.value.title,

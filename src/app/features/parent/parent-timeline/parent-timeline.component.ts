@@ -1,4 +1,5 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild, AfterViewInit, HostListener } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -84,6 +85,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     private authService: AuthService,
     private pushService: PushNotificationService,
     private cdr: ChangeDetectorRef,
+    private http: HttpClient,
   ) {}
 
   ngOnInit(): void {
@@ -394,10 +396,60 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     return value.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
+
+
   /** trackBy functions for *ngFor performance */
   trackChild(_: number, child: ParentChild): string { return child.id; }
   trackTimelineItem(_: number, item: TimelineItem): string { return item.id || `${item.type}-${item.created_at}`; }
   trackMedia(_: number, m: any): string { return m.media_url || m.id; }
+
+  /** Download image using HttpClient and force save to gallery */
+  downloadImage(imageUrl: string): void {
+    this.http.get(imageUrl, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'Scholaro_Moment.jpg';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+        }, 100);
+      },
+      error: () => {
+        // Fallback: open image in new tab if download fails
+        window.open(imageUrl, '_blank');
+      }
+    });
+  }
+
+  /** Social Sharing: Share image using Web Share API or fallback */
+  async shareImage(imageUrl: string, title: string): Promise<void> {
+    try {
+      const shareText = 'Proud moment at Kids Castle Borewell Road via Scholaro App!';
+      // Fetch the image as a Blob
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      // Create a File object for sharing
+      const file = new File([blob], 'Scholaro_Moment.jpg', { type: blob.type });
+      // Check if Web Share API with files is supported
+      if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
+        await (navigator as any).share({
+          files: [file],
+          title: title,
+          text: shareText
+        });
+      } else {
+        // Fallback: open image in new tab for long-press save
+        window.open(imageUrl, '_blank');
+      }
+    } catch (err) {
+      // Fallback: open image in new tab if anything fails
+      window.open(imageUrl, '_blank');
+    }
+  }
 
   /** Get child's initials */
   getInitials(child: ParentChild): string {

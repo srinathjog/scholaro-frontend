@@ -262,18 +262,59 @@
           <!-- Photo gallery — 2×2 grid or full-width hero -->
           <div *ngIf="item.media && item.media.length" class="mt-0.5">
             <!-- Single image -->
-            <img *ngIf="item.media.length === 1"
-                 [src]="item.media[0].media_url"
-                 [alt]="item.title || 'Photo'"
-                 class="w-full aspect-[4/3] object-cover"
-                 loading="lazy" />
+            <div class="relative">
+              <img *ngIf="item.media.length === 1"
+                   [src]="item.media[0].media_url"
+                   [alt]="item.title || 'Photo'"
+                   class="w-full aspect-[4/3] object-cover"
+                   loading="lazy" />
+              <!-- Social Action Bar overlay -->
+              <div class="absolute bottom-2 right-2 flex gap-2 bg-black/40 rounded-full px-3 py-1.5 items-center shadow-md"
+                   style="backdrop-filter: blur(2px);">
+                <button (click)="downloadImage(item.media[0].media_url)"
+                        class="text-white hover:text-emerald-300 transition-colors p-1.5 rounded-full focus:outline-none"
+                        title="Download photo">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12" />
+                  </svg>
+                </button>
+                <button (click)="shareImage(item.media[0].media_url, item.title || 'Scholaro Moment')"
+                        class="text-white hover:text-emerald-300 transition-colors p-1.5 rounded-full focus:outline-none"
+                        title="Share to WhatsApp or Social">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 8a3 3 0 11-6 0 3 3 0 016 0zm6 8a9 9 0 11-18 0 9 9 0 0118 0zm-7-3v4m0 0h-2m2 0h2" />
+                  </svg>
+                </button>
+              </div>
+            </div>
             <!-- 2×2 grid -->
             <div *ngIf="item.media.length > 1" class="grid grid-cols-2 gap-0.5">
-              <img *ngFor="let m of item.media; trackBy: trackMedia; let j = index"
-                   [src]="m.media_url"
-                   [alt]="item.title || 'Photo'"
-                   class="w-full aspect-square object-cover"
-                   loading="lazy" />
+              <ng-container *ngFor="let m of item.media; trackBy: trackMedia; let j = index">
+                <div class="relative">
+                  <img [src]="m.media_url"
+                       [alt]="item.title || 'Photo'"
+                       class="w-full aspect-square object-cover"
+                       loading="lazy" />
+                  <!-- Social Action Bar overlay for each image -->
+                  <div class="absolute bottom-2 right-2 flex gap-2 bg-black/40 rounded-full px-3 py-1.5 items-center shadow-md"
+                       style="backdrop-filter: blur(2px);">
+                    <button (click)="downloadImage(m.media_url)"
+                            class="text-white hover:text-emerald-300 transition-colors p-1.5 rounded-full focus:outline-none"
+                            title="Download photo">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12" />
+                      </svg>
+                    </button>
+                    <button (click)="shareImage(m.media_url, item.title || 'Scholaro Moment')"
+                            class="text-white hover:text-emerald-300 transition-colors p-1.5 rounded-full focus:outline-none"
+                            title="Share to WhatsApp or Social">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 8a3 3 0 11-6 0 3 3 0 016 0zm6 8a9 9 0 11-18 0 9 9 0 0118 0zm-7-3v4m0 0h-2m2 0h2" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </ng-container>
             </div>
           </div>
 
