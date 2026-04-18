@@ -1,3 +1,4 @@
+
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild, AfterViewInit, HostListener } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
@@ -22,6 +23,82 @@ import { TimeAgoPipe } from '../../../shared/pipes/time-ago.pipe';
   templateUrl: './parent-timeline.component.html',
 })
 export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit {
+
+  ngOnInit(): void {
+    this.loadChildren();
+  }
+
+  /** Download all images in an activity as a ZIP */
+  async downloadAllPhotos(activity: any): Promise<void> {
+    if (!activity.media || !activity.media.length) return;
+    const activityId = activity.id || (activity.created_at + '_' + (activity.title || ''));
+    this.bulkDownloadLoading[activityId] = true;
+    const JSZip = (await import('jszip')).default;
+    // @ts-ignore
+    const { saveAs } = await import('file-saver');
+    const zip = new JSZip();
+    let idx = 1;
+    for (const m of activity.media) {
+      try {
+        const blob = await this.http.get(m.media_url, { responseType: 'blob' }).toPromise();
+        if (blob) {
+          const ext = m.media_url.split('.').pop()?.split('?')[0] || 'jpg';
+          zip.file(`photo_${idx}.${ext}`, blob);
+          idx++;
+        }
+      } catch (e) {
+        // skip failed image
+      }
+    }
+    const childName = (this.selectedChild?.first_name || 'Child').replace(/\s+/g, '');
+    const title = (activity.title || 'Activity').replace(/[^a-zA-Z0-9]+/g, '_');
+    const date = (activity.created_at || '').slice(0, 10);
+    const zipName = `${childName}_${title}_${date}.zip`;
+    const content = await zip.generateAsync({ type: 'blob' });
+    saveAs(content, zipName);
+    this.bulkDownloadLoading[activityId] = false;
+    this.cdr.detectChanges();
+  }
+
+  /** Share the whole post (text + all images) */
+  async sharePost(item: any): Promise<void> {
+    try {
+      const shareText = this.formatActivityTitle(item).replace(/<[^>]+>/g, '') + (item.description ? '\n' + item.description : '');
+      const files: File[] = [];
+      if (item.media && item.media.length) {
+        for (const m of item.media) {
+          const response = await fetch(m.media_url);
+          const blob = await response.blob();
+          files.push(new File([blob], 'Scholaro_Moment.jpg', { type: blob.type }));
+        }
+      }
+      if ((navigator as any).canShare && (navigator as any).canShare({ files })) {
+        await (navigator as any).share({
+          files,
+          title: 'Scholaro Update',
+          text: shareText
+        });
+      } else {
+        // Fallback: open first image in new tab, copy text
+        if (item.media && item.media.length) {
+          window.open(item.media[0].media_url, '_blank');
+        }
+        // Optionally, copy text to clipboard
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(shareText);
+          alert('Post text copied to clipboard!');
+        }
+      }
+    } catch (err) {
+      // Fallback: open first image in new tab
+      if (item.media && item.media.length) {
+        window.open(item.media[0].media_url, '_blank');
+      }
+    }
+  }
+
+
+
   // Data
   children: ParentChild[] = [];
   timeline: TimelineItem[] = [];
@@ -80,62 +157,17 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     },
   };
 
+  /** Loading state for bulk download by activity id */
+  bulkDownloadLoading: { [activityId: string]: boolean } = {};
+
   constructor(
-    private parentService: ParentService,
-    private authService: AuthService,
-    private pushService: PushNotificationService,
-    private cdr: ChangeDetectorRef,
-    private http: HttpClient,
+    public parentService: ParentService,
+    public auth: AuthService,
+    public http: HttpClient,
+    public cdr: ChangeDetectorRef,
+    public push: PushNotificationService,
   ) {}
 
-  ngOnInit(): void {
-    // Check if parent is on first login (temporary password)
-    const user = this.authService.currentUser$;
-    user.subscribe(u => {
-      if (u?.isFirstLogin) {
-        this.showFirstLoginBanner = true;
-        this.cdr.detectChanges();
-      }
-    });
-
-    this.loadChildren();
-    // Register for push notifications (fire-and-forget)
-    this.pushService.subscribe().catch(() => {});
-
-    // Auto-refresh timeline when a foreground push arrives
-    this.pushSub = this.pushService.onMessage$.subscribe(() => {
-      if (this.selectedEnrollmentId && this.selectedClassId && this.isToday) {
-        console.log('[Timeline] Foreground push received — auto-refreshing');
-        this.parentService
-          .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
-          .subscribe({
-            next: (result) => {
-              this.timeline = result.items;
-              this.hasNextPage = result.hasNextPage;
-              this.currentPage = 1;
-              this.cdr.detectChanges();
-            },
-          });
-      }
-    });
-
-    // Silent 60-second polling — only when viewing today & tab is visible
-    this.pollSub = interval(60_000)
-      .pipe(
-        filter(() => this.isToday && !!this.selectedEnrollmentId && !!this.selectedClassId && document.visibilityState === 'visible'),
-        switchMap(() =>
-          this.parentService.refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id),
-        ),
-      )
-      .subscribe({
-        next: (result) => {
-          this.timeline = result.items;
-          this.hasNextPage = result.hasNextPage;
-          this.currentPage = 1;
-          this.cdr.detectChanges();
-        },
-      });
-  }
 
   dismissBanner(): void {
     this.showFirstLoginBanner = false;

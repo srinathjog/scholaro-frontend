@@ -177,6 +177,10 @@ export class PickupComponent implements OnInit {
     this.modalRecord = null;
   }
 
+  onCancel(): void {
+    this.closeModal();
+  }
+
   selectPickupPerson(key: string): void {
     this.pickupPerson = key;
     if (key !== 'Other') this.customPickupName = '';
@@ -345,5 +349,10 @@ export class PickupComponent implements OnInit {
     if (!record) return;
     const student = this.students.find(s => s.id === record.enrollment_id);
     if (student) this.openModal(student);
+  }
+
+  close(): void {
+    // Route to Teacher Home screen (assume /teacher route)
+    window.location.href = '/teacher';
   }
 }

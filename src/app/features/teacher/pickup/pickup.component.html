@@ -1,10 +1,23 @@
 <!-- HIGH-CONTRAST DESIGN: Bold colors readable in afternoon sun -->
 
 <!-- ═══ HEADER ═══ -->
+
 <div class="sticky top-0 z-30 bg-gray-900 text-white px-4 py-3 shadow-xl">
   <div class="max-w-2xl mx-auto">
     <div class="flex items-center justify-between">
-      <div>
+      <!-- Left: Close/Cancel button for iOS UX safety -->
+      <button
+        (click)="close()"
+        aria-label="Close"
+        class="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 p-2 mr-2"
+        style="min-width:44px;min-height:44px"
+      >
+        <span class="sr-only">Close</span>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+      <div class="flex-1">
         <h1 class="text-lg font-extrabold tracking-tight">🛡️ Secure Pickup</h1>
         <p class="text-xs text-gray-400">{{ todayFormatted }} · Afternoon Handover</p>
       </div>
@@ -232,6 +245,18 @@
 
   <!-- Sheet -->
   <div class="relative bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[92vh] overflow-y-auto shadow-2xl">
+    <!-- Close/Cancel button in top-right -->
+    <button
+      (click)="onCancel()"
+      aria-label="Cancel"
+      class="absolute top-4 right-4 w-11 h-11 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-amber-500"
+      style="min-width:44px;min-height:44px"
+    >
+      <span class="sr-only">Cancel</span>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
 
     <!-- Handle bar -->
     <div class="flex justify-center pt-3 pb-1">

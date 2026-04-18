@@ -268,24 +268,6 @@
                    [alt]="item.title || 'Photo'"
                    class="w-full aspect-[4/3] object-cover"
                    loading="lazy" />
-              <!-- Social Action Bar overlay -->
-              <div class="absolute bottom-2 right-2 flex gap-2 bg-black/40 rounded-full px-3 py-1.5 items-center shadow-md"
-                   style="backdrop-filter: blur(2px);">
-                <button (click)="downloadImage(item.media[0].media_url)"
-                        class="text-white hover:text-emerald-300 transition-colors p-1.5 rounded-full focus:outline-none"
-                        title="Download photo">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12" />
-                  </svg>
-                </button>
-                <button (click)="shareImage(item.media[0].media_url, item.title || 'Scholaro Moment')"
-                        class="text-white hover:text-emerald-300 transition-colors p-1.5 rounded-full focus:outline-none"
-                        title="Share to WhatsApp or Social">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 8a3 3 0 11-6 0 3 3 0 016 0zm6 8a9 9 0 11-18 0 9 9 0 0118 0zm-7-3v4m0 0h-2m2 0h2" />
-                  </svg>
-                </button>
-              </div>
             </div>
             <!-- 2×2 grid -->
             <div *ngIf="item.media.length > 1" class="grid grid-cols-2 gap-0.5">
@@ -295,24 +277,6 @@
                        [alt]="item.title || 'Photo'"
                        class="w-full aspect-square object-cover"
                        loading="lazy" />
-                  <!-- Social Action Bar overlay for each image -->
-                  <div class="absolute bottom-2 right-2 flex gap-2 bg-black/40 rounded-full px-3 py-1.5 items-center shadow-md"
-                       style="backdrop-filter: blur(2px);">
-                    <button (click)="downloadImage(m.media_url)"
-                            class="text-white hover:text-emerald-300 transition-colors p-1.5 rounded-full focus:outline-none"
-                            title="Download photo">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 4v12" />
-                      </svg>
-                    </button>
-                    <button (click)="shareImage(m.media_url, item.title || 'Scholaro Moment')"
-                            class="text-white hover:text-emerald-300 transition-colors p-1.5 rounded-full focus:outline-none"
-                            title="Share to WhatsApp or Social">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 8a3 3 0 11-6 0 3 3 0 016 0zm6 8a9 9 0 11-18 0 9 9 0 0118 0zm-7-3v4m0 0h-2m2 0h2" />
-                      </svg>
-                    </button>
-                  </div>
                 </div>
               </ng-container>
             </div>
@@ -326,6 +290,26 @@
                class="text-gray-500 text-sm mt-1 leading-relaxed">
               {{ item.description }}
             </p>
+          </div>
+
+          <!-- Post Action Bar -->
+          <div class="mx-4">
+            <div class="border-t border-gray-100/80"></div>
+            <div class="flex flex-col gap-2 bg-blue-50 rounded-2xl px-4 py-3 mt-2">
+              <button *ngIf="item.media && item.media.length > 1"
+                      (click)="downloadAllPhotos(item)"
+                      [disabled]="bulkDownloadLoading[item.id || (item.created_at + '_' + (item.title || ''))]"
+                      class="flex items-center justify-center gap-2 w-full py-2 rounded-xl font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 transition disabled:opacity-60">
+                <span class="text-lg">📥</span>
+                <span *ngIf="!bulkDownloadLoading[item.id || (item.created_at + '_' + (item.title || ''))]">Download All Photos</span>
+                <span *ngIf="bulkDownloadLoading[item.id || (item.created_at + '_' + (item.title || ''))]">Preparing ZIP...</span>
+              </button>
+              <button (click)="sharePost(item)"
+                      class="flex items-center justify-center gap-2 w-full py-2 rounded-xl font-bold text-blue-700 bg-blue-100 hover:bg-blue-200 transition">
+                <span class="text-lg">📤</span>
+                <span>Share This Update</span>
+              </button>
+            </div>
           </div>
         </div>
 
