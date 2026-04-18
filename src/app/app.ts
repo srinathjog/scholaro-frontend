@@ -1,8 +1,10 @@
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, Inject } from '@angular/core';
+import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { RouterOutlet, ActivatedRoute } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { filter, switchMap } from 'rxjs/operators';
+import { interval, Subscription as RxSubscription } from 'rxjs';
 import { AuthService } from './core/services/auth.service';
 import { SettingsService } from './data/services/settings.service';
 import { environment } from '../environments/environment';
@@ -16,12 +18,18 @@ import { environment } from '../environments/environment';
 export class App implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private sub?: Subscription;
+  // ...existing code...
+  private swUpdatePollSub?: RxSubscription;
+
+  // SwUpdate subscription
+  private swUpdateSub?: Subscription;
 
   constructor(
     private authService: AuthService,
     private settingsService: SettingsService,
     private route: ActivatedRoute,
     @Inject(DOCUMENT) private document: Document,
+    private swUpdate: SwUpdate,
   ) {}
 
   ngOnInit(): void {
@@ -48,10 +56,53 @@ export class App implements OnInit, OnDestroy {
         // Silently fall back to defaults — CSS variables remain unset or use fallbacks
       },
     });
+
+    // --- Silent Auto-Update Logic ---
+    if (this.swUpdate.isEnabled) {
+      this.swUpdateSub = this.swUpdate.versionUpdates.subscribe(event => {
+        if (event.type === 'VERSION_READY') {
+          console.log('[PWA] New version detected, activating update...');
+          this.swUpdate.activateUpdate().then(() => {
+            // Only reload if not on login page and document is visible
+            const isLogin = this.document.location.pathname.includes('login');
+            if (!isLogin && !this.document.hidden) {
+              console.log('[PWA] Update activated, reloading page.');
+              this.document.defaultView?.location.reload();
+            } else {
+              console.log('[PWA] Update activated, but reload skipped (login page or hidden).');
+            }
+          });
+        }
+      });
+
+      // --- Background Heartbeat Polling ---
+      this.swUpdatePollSub = interval(15 * 60 * 1000).subscribe(() => {
+        this.swUpdate.checkForUpdate().then((updated) => {
+          if (updated) {
+            console.log('[PWA] Heartbeat: Update found and triggered.');
+          } else {
+            console.log('[PWA] Heartbeat: No update found.');
+          }
+        }).catch(err => {
+          console.warn('[PWA] Heartbeat: Update check failed', err);
+        });
+      });
+
+      // --- Unrecoverable State Handler ---
+      this.swUpdate.unrecoverable.subscribe(event => {
+        console.error('[PWA] Unrecoverable state detected:', event.reason);
+        // Always reload to recover from a broken cache
+        this.document.defaultView?.location.reload();
+      });
+    } else {
+      console.log('[PWA] Service Worker updates are not enabled.');
+    }
   }
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.swUpdateSub?.unsubscribe();
+    this.swUpdatePollSub?.unsubscribe();
   }
 
   private setupDynamicBranding(): void {
