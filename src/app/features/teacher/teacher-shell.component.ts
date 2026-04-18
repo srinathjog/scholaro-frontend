@@ -49,7 +49,19 @@ import { filter, take } from 'rxjs/operators';
             </div>
             <div class="min-w-0">
               <p class="text-sm font-bold text-gray-900 truncate" [title]="schoolName">{{ schoolDisplayName }}</p>
-              <p class="text-[10px] text-gray-400 uppercase tracking-wider">Teacher</p>
+              <ng-container *ngIf="authService.currentUser$ | async as user">
+                <span
+                  class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-0.5"
+                  [ngClass]="{
+                    'bg-red-100 text-red-600': user.role === 'SCHOOL_ADMIN',
+                    'bg-blue-100 text-blue-600': user.role === 'TEACHER',
+                    'bg-green-100 text-green-600': user.role === 'PARENT'
+                  }"
+                >
+                  {{ user.role === 'SCHOOL_ADMIN' ? 'School Admin' : (user.role === 'TEACHER' ? 'Teacher' : (user.role === 'PARENT' ? 'Parent' : user.role)) }}
+                </span>
+                <p class="text-xs text-gray-500 break-all mt-0.5">{{ user.email }}</p>
+              </ng-container>
             </div>
           </div>
         </div>
@@ -157,7 +169,7 @@ export class TeacherShellComponent implements OnInit {
   private touchStartY = 0;
 
   constructor(
-    private authService: AuthService,
+    public authService: AuthService,
     private router: Router,
     private activityService: ActivityService,
   ) {

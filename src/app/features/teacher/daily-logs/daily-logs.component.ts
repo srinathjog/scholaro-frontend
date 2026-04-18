@@ -48,7 +48,7 @@ const QUICK_ACTIONS: Record<string, QuickAction[]> = {
 };
 
 const CATEGORY_TABS: { key: LogCategory; label: string; icon: string }[] = [
-  { key: 'meal', label: 'Meal', icon: '�' },
+  { key: 'meal', label: 'Meal', icon: '🍲' },
   { key: 'nap', label: 'Nap', icon: '😴' },
   { key: 'potty', label: 'Potty', icon: '🚽' },
   { key: 'mood', label: 'Mood', icon: '😊' },
@@ -61,6 +61,55 @@ const CATEGORY_TABS: { key: LogCategory; label: string; icon: string }[] = [
   templateUrl: './daily-logs.component.html',
 })
 export class DailyLogsComponent implements OnInit {
+      /** Set first sub-option active by default when main category changes */
+      set selectedCategory(cat: LogCategory) {
+        this._selectedCategory = cat;
+        const actions = this.quickActions[cat];
+        this.pendingValue = actions && actions.length > 0 ? actions[0].value : null;
+      }
+      get selectedCategory(): LogCategory {
+        return this._selectedCategory;
+      }
+      private _selectedCategory: LogCategory = 'meal';
+    // Safe-Log state
+    pendingValue: string | null = null;
+    /** Called when a sub-option is selected, but not yet sent */
+    selectSubOption(value: string): void {
+      this.pendingValue = value;
+    }
+
+    /** Confirm and send the selected log value for all selected students */
+    confirmAndSend(): void {
+      if (!this.pendingValue || this.selectedStudentIds.size === 0) return;
+      this.saving = true;
+      this.errorMessage = '';
+      const enrollmentIds = Array.from(this.selectedStudentIds);
+      const action = this.currentActions.find(a => a.value === this.pendingValue);
+      if (!action) return;
+      this.dailyLogService
+        .postBulkLog({
+          enrollment_ids: enrollmentIds,
+          category: action.category,
+          log_value: action.value,
+        })
+        .subscribe({
+          next: (logs) => {
+            this.todaysLogs.push(...logs);
+            this.successMessage = `${action.icon} ${action.label} logged for ${enrollmentIds.length} student${enrollmentIds.length !== 1 ? 's' : ''}!`;
+            this.selectedStudentIds.clear();
+            this.selectAll = false;
+            this.saving = false;
+            this.pendingValue = null;
+            setTimeout(() => (this.successMessage = ''), 4000);
+            this.cdr.detectChanges();
+          },
+          error: () => {
+            this.errorMessage = 'Failed to save logs. Please try again.';
+            this.saving = false;
+            this.cdr.detectChanges();
+          },
+        });
+    }
   // Data
   assignments: TeacherAssignment[] = [];
   students: EnrolledStudent[] = [];
@@ -68,7 +117,6 @@ export class DailyLogsComponent implements OnInit {
 
   // UI state
   selectedClassId = '';
-  selectedCategory: LogCategory = 'meal';
   selectedStudentIds = new Set<string>();
   selectAll = false;
   loading = false;
@@ -174,41 +222,7 @@ export class DailyLogsComponent implements OnInit {
     return this.selectedStudentIds.has(enrollmentId);
   }
 
-  handleQuickLog(action: QuickAction): void {
-    if (this.selectedStudentIds.size === 0) {
-      this.errorMessage = 'Select at least one student first.';
-      setTimeout(() => (this.errorMessage = ''), 3000);
-      return;
-    }
-
-    this.saving = true;
-    this.errorMessage = '';
-
-    const enrollmentIds = Array.from(this.selectedStudentIds);
-
-    this.dailyLogService
-      .postBulkLog({
-        enrollment_ids: enrollmentIds,
-        category: action.category,
-        log_value: action.value,
-      })
-      .subscribe({
-        next: (logs) => {
-          this.todaysLogs.push(...logs);
-          this.successMessage = `${action.icon} ${action.label} logged for ${enrollmentIds.length} student${enrollmentIds.length !== 1 ? 's' : ''}!`;
-          this.selectedStudentIds.clear();
-          this.selectAll = false;
-          this.saving = false;
-          setTimeout(() => (this.successMessage = ''), 4000);
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.errorMessage = 'Failed to save logs. Please try again.';
-          this.saving = false;
-          this.cdr.detectChanges();
-        },
-      });
-  }
+  // handleQuickLog removed: replaced by selectSubOption/confirmAndSend
 
   /** Check if a student already has a log for the current category today */
   getStudentLogForCategory(enrollmentId: string): DailyLog | undefined {
