@@ -4,8 +4,9 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface BulkImportResult {
-  imported: number;
-  skipped?: number;
+  successCount: number;
+  studentsUpdatedCount?: number;
+  failureCount?: number;
   errors?: Array<{ row: number; student: string; error: string }>;
   message?: string;
   parentsCreated?: number;

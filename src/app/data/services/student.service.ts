@@ -84,4 +84,14 @@ export class StudentService {
       custom_fee_amount: customFeeAmount,
     });
   }
+
+  /** Returns id, first_name, last_name for students enrolled in a class.
+   * The TenantInterceptor automatically attaches x-tenant-id to every request. */
+  getStudentsByClass(classId: string, sectionId?: string): Observable<Pick<Student, 'id' | 'first_name' | 'last_name'>[]> {
+    const params: Record<string, string> = sectionId ? { sectionId } : {};
+    return this.http.get<Pick<Student, 'id' | 'first_name' | 'last_name'>[]>(
+      `${this.api}/by-class/${classId}`,
+      { params },
+    );
+  }
 }

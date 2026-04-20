@@ -135,7 +135,7 @@
           <!-- Success Summary Cards (Students) -->
           <div *ngIf="activeTab === 'students'" class="grid grid-cols-3 gap-3">
             <div class="bg-blue-50 rounded-xl p-4 text-center border border-blue-100">
-              <p class="text-2xl font-bold text-blue-700">{{ result.imported }}</p>
+              <p class="text-2xl font-bold text-blue-700">{{ result.successCount }}</p>
               <p class="text-xs font-medium text-blue-600 mt-1">Students Imported</p>
             </div>
             <div class="bg-violet-50 rounded-xl p-4 text-center border border-violet-100">
@@ -150,7 +150,7 @@
 
           <!-- Success Summary (Teachers) -->
           <div *ngIf="activeTab === 'teachers'" class="bg-blue-50 rounded-xl p-4 text-center border border-blue-100">
-            <p class="text-2xl font-bold text-blue-700">{{ result.imported }}</p>
+            <p class="text-2xl font-bold text-blue-700">{{ result.successCount }}</p>
             <p class="text-xs font-medium text-blue-600 mt-1">Teachers Imported</p>
           </div>
 
@@ -160,15 +160,41 @@
             <span *ngIf="result.newSections">{{ result.newSections }} new section{{ result.newSections! > 1 ? 's' : '' }} created</span>
           </div>
 
-          <!-- Skipped rows / errors -->
+          <!-- Error Summary Card -->
           <div *ngIf="result.errors && result.errors.length > 0"
-               class="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p class="text-xs font-semibold text-amber-700 mb-2">⚠️ Skipped Rows ({{ result.errors.length }})</p>
-            <ul class="space-y-1 max-h-40 overflow-y-auto">
-              <li *ngFor="let err of result.errors" class="text-xs text-amber-600">
-                • Row {{ err.row }} ({{ err.student }}): {{ err.error }}
-              </li>
-            </ul>
+               class="bg-red-50 border border-red-300 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-red-500 text-base">❌</span>
+                <p class="text-sm font-semibold text-red-700">
+                  {{ result.errors.length }} Row{{ result.errors.length > 1 ? 's' : '' }} Could Not Be Imported
+                </p>
+              </div>
+              <button type="button" (click)="result = null"
+                      class="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">
+                Clear
+              </button>
+            </div>
+            <p class="text-xs text-red-500 mb-3">Fix the issues below in your CSV/Excel file and re-upload.</p>
+            <div class="overflow-y-auto max-h-52 rounded-lg border border-red-200">
+              <table class="w-full text-xs">
+                <thead class="bg-red-100 sticky top-0">
+                  <tr>
+                    <th class="text-left px-3 py-2 text-red-700 font-semibold w-14">Row</th>
+                    <th class="text-left px-3 py-2 text-red-700 font-semibold w-32">Student</th>
+                    <th class="text-left px-3 py-2 text-red-700 font-semibold">Error</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let err of result.errors; let i = index"
+                      [class]="i % 2 === 0 ? 'bg-white' : 'bg-red-50/50'">
+                    <td class="px-3 py-2 text-red-600 font-medium">{{ err.row }}</td>
+                    <td class="px-3 py-2 text-red-600">{{ err.student }}</td>
+                    <td class="px-3 py-2 text-red-700">{{ err.error }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <button (click)="reset()"

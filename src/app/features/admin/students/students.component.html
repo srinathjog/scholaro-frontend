@@ -61,7 +61,7 @@
             [routerLink]="['/admin/students', s.id]"
             class="hover:bg-gray-50/50 transition-colors cursor-pointer">
           <td class="px-5 py-3.5 text-gray-400 font-mono text-xs">{{ i + 1 }}</td>
-          <td class="px-5 py-3.5 font-medium text-gray-900">{{ s.first_name }} {{ s.last_name }}</td>
+          <td class="px-5 py-3.5 font-medium text-gray-900">{{ s.first_name | titlecase }} {{ s.last_name | titlecase }}</td>
           <td class="px-5 py-3.5">
             <span *ngIf="s.current_class" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
               {{ s.current_class }}<span *ngIf="s.current_section" class="text-indigo-400 mx-1">·</span><span *ngIf="s.current_section">{{ s.current_section }}</span>
