@@ -61,8 +61,13 @@ export class BulkUploadComponent {
         this.result = res;
         this.uploading = false;
         this.cdr.detectChanges();
-        // Navigate to Classes page after short delay so user sees success
-        setTimeout(() => this.router.navigate(['/admin/classes']), 1500);
+
+        const hasErrors = res.errors && res.errors.length > 0;
+        if (!hasErrors) {
+          // Clean import — navigate to Classes after a short delay
+          setTimeout(() => this.router.navigate(['/admin/classes']), 1500);
+        }
+        // If there are errors, stay on the page so the user can review them
       },
       error: (err) => {
         this.error = err.error?.message || 'Upload failed. Check your file format and try again.';
