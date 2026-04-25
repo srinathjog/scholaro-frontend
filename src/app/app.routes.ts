@@ -96,6 +96,11 @@ export const routes: Routes = [
 				loadComponent: () => import('./features/admin/academic/academic-year-list.component').then(m => m.AcademicYearListComponent),
 				title: 'Academic Years',
 			},
+			{
+				path: 'calendar',
+				loadComponent: () => import('./features/admin/calendar/admin-calendar.component').then(m => m.AdminCalendarComponent),
+				title: 'Events Calendar',
+			},
 		],
 	},
 	{
@@ -176,6 +181,11 @@ export const routes: Routes = [
 				path: 'change-password',
 				loadComponent: () => import('./features/parent/change-password/change-password.component').then(m => m.ChangePasswordComponent),
 				title: 'Change Password',
+			},
+			{
+				path: 'schedule',
+				loadComponent: () => import('./features/parent/school-schedule/school-schedule.component').then(m => m.SchoolScheduleComponent),
+				title: 'School Schedule',
 			},
 		],
 	},
