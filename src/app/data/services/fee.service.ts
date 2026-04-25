@@ -53,6 +53,8 @@ export interface Defaulter {
   roll_number: string;
   fees: Fee[];
   total_due: number;
+  /** True when every fee for this student has status 'paid'. */
+  is_fully_paid?: boolean;
 }
 
 export interface DefaultersReport {
@@ -134,6 +136,10 @@ export class FeeService {
 
   getDefaultersList(classId: string): Observable<DefaultersReport> {
     return this.http.get<DefaultersReport>(`${this.apiUrl}/fees/defaulters/${classId}`);
+  }
+
+  getAllStudentsFees(classId: string): Observable<{ count: number; entries: Defaulter[] }> {
+    return this.http.get<{ count: number; entries: Defaulter[] }>(`${this.apiUrl}/fees/all-students/${classId}`);
   }
 
   getClassFeeSummary(classId: string): Observable<FeeSummary> {

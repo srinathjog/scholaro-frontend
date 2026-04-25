@@ -10,6 +10,7 @@ export interface CreateActivityDto {
   description?: string;
   activity_type: string;
   media_urls: string[];
+  media_types?: string[];
 }
 
 export interface Activity {

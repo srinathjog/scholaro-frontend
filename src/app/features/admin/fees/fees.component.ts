@@ -34,6 +34,10 @@ export class FeesComponent implements OnInit {
   selectedClassId = '';
   summary: FeeSummary | null = null;
   defaultersReport: DefaultersReport | null = null;
+  /** Full class roster with all fee statuses (loaded for the "Show Paid" toggle). */
+  allStudentsReport: { count: number; entries: Defaulter[] } | null = null;
+  /** When true, show all students including those fully paid. */
+  showPaidStudents = false;
   loading = false;
 
   // Payment modal
@@ -161,6 +165,12 @@ export class FeesComponent implements OnInit {
     this.feeService.getDefaultersList(this.selectedClassId).subscribe({
       next: (r) => { this.defaultersReport = r; done(); },
       error: () => { this.errorMessage = 'Failed to load defaulters.'; done(); },
+    });
+
+    // Load all-students data for the "Show Paid" toggle (non-blocking)
+    this.feeService.getAllStudentsFees(this.selectedClassId).subscribe({
+      next: (r) => { this.allStudentsReport = r; this.cdr.detectChanges(); },
+      error: () => {},
     });
   }
 
@@ -344,6 +354,14 @@ export class FeesComponent implements OnInit {
   }
 
   // ═══════════════ HELPERS ═══════════════
+
+  /** Students shown in the fee list — filtered by the showPaidStudents toggle. */
+  get visibleStudents(): Defaulter[] {
+    if (this.showPaidStudents) {
+      return this.allStudentsReport?.entries ?? [];
+    }
+    return this.defaultersReport?.defaulters ?? [];
+  }
 
   get selectedClassName(): string {
     return this.classes.find((c) => c.id === this.selectedClassId)?.name || 'Class';
