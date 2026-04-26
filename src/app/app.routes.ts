@@ -6,8 +6,13 @@ import { LoginComponent } from './features/auth/login/login.component';
 export const routes: Routes = [
 	{
 		path: '',
-		redirectTo: 'login',
-		pathMatch: 'full',
+		loadComponent: () => import('./features/landing/landing-page/landing-page.component').then(m => m.LandingPageComponent),
+		title: 'Scholaro — The Smart School App',
+	},
+	{
+		path: 'register',
+		loadComponent: () => import('./features/landing/register/register.component').then(m => m.RegisterComponent),
+		title: 'Request a Demo — Scholaro',
 	},
 	{
 		path: 'login',
@@ -96,6 +101,16 @@ export const routes: Routes = [
 				loadComponent: () => import('./features/admin/academic/academic-year-list.component').then(m => m.AcademicYearListComponent),
 				title: 'Academic Years',
 			},
+			{
+				path: 'calendar',
+				loadComponent: () => import('./features/admin/calendar/admin-calendar.component').then(m => m.AdminCalendarComponent),
+				title: 'Events Calendar',
+			},
+			{
+				path: 'feed',
+				loadComponent: () => import('./features/admin/global-feed/global-feed.component').then(m => m.GlobalFeedComponent),
+				title: 'Global Activity Feed',
+			},
 		],
 	},
 	{
@@ -176,6 +191,11 @@ export const routes: Routes = [
 				path: 'change-password',
 				loadComponent: () => import('./features/parent/change-password/change-password.component').then(m => m.ChangePasswordComponent),
 				title: 'Change Password',
+			},
+			{
+				path: 'schedule',
+				loadComponent: () => import('./features/parent/school-schedule/school-schedule.component').then(m => m.SchoolScheduleComponent),
+				title: 'School Schedule',
 			},
 		],
 	},

@@ -6,6 +6,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { filter, switchMap } from 'rxjs/operators';
+import { trigger, transition, style, animate } from '@angular/animations';
 import {
   ParentService,
   ParentChild,
@@ -21,6 +22,25 @@ import { TimeAgoPipe } from '../../../shared/pipes/time-ago.pipe';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule, TimeAgoPipe],
   templateUrl: './parent-timeline.component.html',
+  animations: [
+    // Backdrop fades in/out
+    trigger('lightboxOverlay', [
+      transition(':enter', [
+        style({ opacity: 0 }),
+        animate('220ms ease-out', style({ opacity: 1 }))
+      ]),
+      transition(':leave', [
+        animate('180ms ease-in', style({ opacity: 0 }))
+      ])
+    ]),
+    // Image container scales + fades in on open
+    trigger('lightboxContent', [
+      transition(':enter', [
+        style({ opacity: 0, transform: 'scale(0.92)' }),
+        animate('260ms ease-out', style({ opacity: 1, transform: 'scale(1)' }))
+      ])
+    ])
+  ]
 })
 export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit {
 
@@ -159,6 +179,78 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
 
   /** Loading state for bulk download by activity id */
   bulkDownloadLoading: { [activityId: string]: boolean } = {};
+
+  // ── Lightbox ──────────────────────────────────────────────────────────────
+  /** All image URLs (no videos) from the currently open activity. */
+  lightboxImages: string[] = [];
+  /** Index into lightboxImages currently shown. */
+  lightboxIndex = 0;
+  /** Controls image opacity during prev/next fade transition. */
+  lightboxImageVisible = true;
+
+  /** URL of the image currently displayed; null when lightbox is closed. */
+  get selectedImageUrl(): string | null {
+    return this.lightboxImages.length > 0 ? this.lightboxImages[this.lightboxIndex] : null;
+  }
+
+  openLightboxForActivity(item: any, clickedUrl: string): void {
+    const images: string[] = (item.media || [])
+      .filter((m: any) => m.media_type !== 'video')
+      .map((m: any) => m.media_url as string);
+    const idx = images.indexOf(clickedUrl);
+    this.lightboxImages = images;
+    this.lightboxIndex = idx >= 0 ? idx : 0;
+    this.lightboxImageVisible = true;
+    this.cdr.detectChanges();
+  }
+
+  closeLightbox(): void {
+    this.lightboxImages = [];
+    this.lightboxIndex = 0;
+    this.cdr.detectChanges();
+  }
+
+  lightboxPrev(): void {
+    if (this.lightboxIndex > 0 && this.lightboxImageVisible) {
+      this.lightboxImageVisible = false;
+      this.cdr.detectChanges();
+      setTimeout(() => {
+        this.lightboxIndex--;
+        this.lightboxImageVisible = true;
+        this.cdr.detectChanges();
+      }, 160);
+    }
+  }
+
+  lightboxNext(): void {
+    if (this.lightboxIndex < this.lightboxImages.length - 1 && this.lightboxImageVisible) {
+      this.lightboxImageVisible = false;
+      this.cdr.detectChanges();
+      setTimeout(() => {
+        this.lightboxIndex++;
+        this.lightboxImageVisible = true;
+        this.cdr.detectChanges();
+      }, 160);
+    }
+  }
+
+  /** Fetch the image and trigger a browser Save-As download for that specific photo. */
+  async downloadSpecificImage(url: string): Promise<void> {
+    try {
+      const blob = await this.http.get(url, { responseType: 'blob' }).toPromise();
+      if (!blob) return;
+      const ext = url.split('.').pop()?.split('?')[0] || 'jpg';
+      const filename = `Scholaro_Photo_${Date.now()}.${ext}`;
+      const anchor = document.createElement('a');
+      anchor.href = URL.createObjectURL(blob);
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(anchor.href);
+    } catch {
+      // Fallback: open in new tab so the parent can long-press save on mobile
+      window.open(url, '_blank');
+    }
+  }
 
   constructor(
     public parentService: ParentService,
@@ -565,9 +657,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   getSecuritySentence(item: TimelineItem): string {
     const name = this.selectedChild?.first_name || 'Your child';
     if (item.security_event === 'check_in') {
-      const time = item.check_in_time ? new Date(item.check_in_time).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
-      const late = item.status === 'late' ? ' (a bit late)' : '';
-      return `${name} arrived safely at ${time}${late}. 🏫`;
+      return `${name} has reached school safely! 🏫`;
     }
     if (item.security_event === 'check_out') {
       const time = item.check_out_time ? new Date(item.check_out_time).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';

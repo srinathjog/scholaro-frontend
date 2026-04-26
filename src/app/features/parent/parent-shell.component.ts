@@ -91,6 +91,14 @@ import { SettingsService } from '../../data/services/settings.service';
           <span class="text-[10px] font-semibold">Fees</span>
         </a>
 
+        <a routerLink="/parent/schedule" routerLinkActive="text-orange-600" [routerLinkActiveOptions]="{exact: false}"
+           class="flex flex-col items-center gap-0.5 px-3 py-1.5 text-gray-400 transition-colors">
+          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span class="text-[10px] font-semibold">Schedule</span>
+        </a>
+
         <a href="https://wa.me/919538004593?text=Hi%20Scholaro%20Team%2C%20I%20need%20help%20with..."
            target="_blank" rel="noopener noreferrer"
            class="flex flex-col items-center gap-0.5 px-3 py-1.5 text-gray-400 hover:text-green-600 transition-colors">

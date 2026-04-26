@@ -259,25 +259,78 @@
           <!-- Divider -->
           <div class="mx-4 border-t border-gray-100/80"></div>
 
-          <!-- Photo gallery — 2×2 grid or full-width hero -->
+          <!-- Photo/Video gallery — 2×2 grid or full-width hero -->
           <div *ngIf="item.media && item.media.length" class="mt-0.5">
-            <!-- Single image -->
+            <!-- Single image or video -->
             <div class="relative">
-              <img *ngIf="item.media.length === 1"
-                   [src]="item.media[0].media_url"
-                   [alt]="item.title || 'Photo'"
-                   class="w-full aspect-[4/3] object-cover"
-                   loading="lazy" />
-            </div>
-            <!-- 2×2 grid -->
-            <div *ngIf="item.media.length > 1" class="grid grid-cols-2 gap-0.5">
-              <ng-container *ngFor="let m of item.media; trackBy: trackMedia; let j = index">
-                <div class="relative">
-                  <img [src]="m.media_url"
+              <ng-container *ngIf="item.media.length === 1">
+                <!-- Video -->
+                <div *ngIf="item.media[0].media_type === 'video'" class="relative">
+                  <video [src]="item.media[0].media_url"
+                         class="w-full aspect-[4/3] object-cover bg-black"
+                         controls muted playsinline
+                         preload="metadata">
+                  </video>
+                  <!-- Play overlay badge -->
+                  <span class="absolute top-2 left-2 flex items-center gap-1 bg-black/60 text-white
+                               text-xs font-bold px-2 py-0.5 rounded-full pointer-events-none">
+                    ▶️ Video
+                  </span>
+                </div>
+                <!-- Image — overflow-hidden on wrapper clips the zoom inside the card -->
+                <div *ngIf="item.media[0].media_type !== 'video'" class="overflow-hidden">
+                  <img [src]="item.media[0].media_url"
                        [alt]="item.title || 'Photo'"
-                       class="w-full aspect-square object-cover"
+                       class="w-full aspect-[4/3] object-cover cursor-pointer
+                              transition-transform duration-300 ease-out hover:scale-105"
+                       (click)="openLightboxForActivity(item, item.media[0].media_url)"
                        loading="lazy" />
                 </div>
+              </ng-container>
+            </div>
+            <!-- 2×2 grid — max 4 thumbnails, 4th shows "+N more" when there are extras -->
+            <div *ngIf="item.media.length > 1" class="grid grid-cols-2 gap-1 p-1">
+              <ng-container *ngFor="let m of item.media; trackBy: trackMedia; let j = index">
+                <!-- Only render first 4 cells -->
+                <ng-container *ngIf="j < 4">
+                  <!-- overflow-hidden clips the zoom so it stays within the rounded corner -->
+                  <div class="relative rounded-lg overflow-hidden">
+                    <!-- Video cell -->
+                    <ng-container *ngIf="m.media_type === 'video'; else imgCell">
+                      <video [src]="m.media_url"
+                             class="w-full aspect-square object-cover bg-black"
+                             muted playsinline preload="metadata">
+                      </video>
+                      <!-- Play overlay -->
+                      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div class="w-10 h-10 rounded-full bg-black/50 flex items-center justify-center">
+                          <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </ng-container>
+                    <!-- Image cell -->
+                    <ng-template #imgCell>
+                      <img [src]="m.media_url"
+                           [alt]="item.title || 'Photo'"
+                           class="w-full aspect-square object-cover cursor-pointer
+                                  transition-transform duration-200 hover:scale-105"
+                           [class.brightness-50]="j === 3 && item.media.length > 4"
+                           (click)="openLightboxForActivity(item, m.media_url)"
+                           loading="lazy" />
+                      <!-- "+N more" overlay on 4th cell when there are hidden photos -->
+                      <div *ngIf="j === 3 && item.media.length > 4"
+                           class="absolute inset-0 flex items-center justify-center
+                                  bg-black/50 cursor-pointer"
+                           (click)="openLightboxForActivity(item, m.media_url)">
+                        <span class="text-white font-bold text-2xl">
+                          +{{ item.media.length - 4 }}
+                        </span>
+                      </div>
+                    </ng-template>
+                  </div>
+                </ng-container>
               </ng-container>
             </div>
           </div>
@@ -454,6 +507,90 @@
                      active:scale-95">
         ← Back to Today
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── LIGHTBOX OVERLAY ─── -->
+<div *ngIf="selectedImageUrl"
+     [@lightboxOverlay]
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm"
+     (click)="closeLightbox()">
+
+  <!-- Left nav arrow -->
+  <button *ngIf="lightboxIndex > 0"
+          (click)="$event.stopPropagation(); lightboxPrev()"
+          class="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center
+                 w-11 h-11 rounded-full bg-white/25 hover:bg-white/45 text-white
+                 transition active:scale-90"
+          aria-label="Previous photo">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+    </svg>
+  </button>
+
+  <!-- Right nav arrow -->
+  <button *ngIf="lightboxIndex < lightboxImages.length - 1"
+          (click)="$event.stopPropagation(); lightboxNext()"
+          class="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center
+                 w-11 h-11 rounded-full bg-white/25 hover:bg-white/45 text-white
+                 transition active:scale-90"
+          aria-label="Next photo">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+    </svg>
+  </button>
+
+  <!-- Image container: X button sits on its top-right corner -->
+  <div class="relative flex flex-col items-center mx-14"
+       [@lightboxContent]
+       (click)="$event.stopPropagation()">
+
+    <!-- Close button — hugs the top-right corner of the image -->
+    <button (click)="closeLightbox()"
+            class="absolute -top-3 -right-3 z-20 flex items-center justify-center w-8 h-8
+                   rounded-full bg-white shadow-lg text-gray-800 hover:bg-gray-200
+                   transition active:scale-90"
+            aria-label="Close">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+
+    <!-- Full-size image — fades out/in during prev/next navigation -->
+    <img [src]="selectedImageUrl"
+         alt="Full size photo"
+         class="max-h-[75vh] max-w-full rounded-xl shadow-2xl object-contain
+                transition-opacity duration-[160ms] ease-in-out"
+         [class.opacity-0]="!lightboxImageVisible" />
+
+    <!-- Counter + action buttons — always visible below the image -->
+    <div class="flex items-center justify-between w-full mt-3 px-1 gap-2">
+      <span class="text-white/80 text-xs font-semibold shrink-0">
+        {{ lightboxIndex + 1 }} / {{ lightboxImages.length }}
+      </span>
+      <div class="flex items-center gap-2">
+        <!-- Share to WhatsApp -->
+        <button (click)="shareImage(selectedImageUrl!, 'Scholaro Moment')"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-full
+                       bg-green-500 text-white font-bold text-sm shadow-lg
+                       hover:bg-green-600 active:scale-95 transition">
+          <!-- WhatsApp icon -->
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.556 4.118 1.528 5.847L0 24l6.335-1.506A11.933 11.933 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 01-5.012-1.374l-.36-.214-3.732.888.928-3.64-.234-.374A9.786 9.786 0 012.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
+          </svg>
+          Share
+        </button>
+        <!-- Download -->
+        <button (click)="downloadSpecificImage(selectedImageUrl!)"
+                class="flex items-center gap-1.5 px-4 py-2 rounded-full
+                       bg-white text-gray-900 font-bold text-sm shadow-lg
+                       hover:bg-gray-100 active:scale-95 transition">
+          <span>📥</span>
+          Download
+        </button>
+      </div>
     </div>
   </div>
 </div>

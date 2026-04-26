@@ -2,7 +2,9 @@ import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AcademicService, SchoolClass, Section, SectionCount } from '../../../data/services/academic.service';
+import { StudentService } from '../../../data/services/student.service';
 import { forkJoin } from 'rxjs';
+import * as XLSX from 'xlsx';
 
 interface ClassCard {
   cls: SchoolClass;
@@ -23,10 +25,15 @@ export class ClassListComponent implements OnInit {
   cards: ClassCard[] = [];
   loading = true;
   error = '';
+  /** Tracks which class ID is currently being exported (for loading state). */
+  exportingClassId = '';
 
   private cdr = inject(ChangeDetectorRef);
 
-  constructor(private academicService: AcademicService) {}
+  constructor(
+    private academicService: AcademicService,
+    private studentService: StudentService,
+  ) {}
 
   ngOnInit(): void {
     this.loadData();
@@ -98,6 +105,49 @@ export class ClassListComponent implements OnInit {
       },
       error: (err) => {
         this.error = err.error?.message || 'Failed to create section';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  exportClass(card: ClassCard): void {
+    this.exportingClassId = card.cls.id;
+    this.studentService.exportClassBioData(card.cls.id).subscribe({
+      next: (rows) => {
+        const sheetData = rows.map(r => ({
+          'Name':          r.name,
+          'Date of Birth': r.date_of_birth
+            ? new Date(r.date_of_birth).toLocaleDateString('en-IN')
+            : '',
+          'Gender':        r.gender ?? '',
+          'Academic Year': r.academic_year ?? '',
+          'Class':         r.class_name ?? '',
+          'Section':       r.section_name ?? '',
+          'Status':        r.status ?? '',
+          'Joining Year':  r.admission_date
+            ? new Date(r.admission_date).getFullYear().toString()
+            : '',
+          'Joining Class': r.joining_class ?? '',
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(sheetData);
+
+        // Auto-size columns
+        const colWidths = Object.keys(sheetData[0] ?? {}).map(key => ({
+          wch: Math.max(key.length, ...sheetData.map(r => String((r as any)[key] ?? '').length))
+        }));
+        ws['!cols'] = colWidths;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, card.cls.name.slice(0, 31));
+        XLSX.writeFile(wb, `biodata-${card.cls.name.replace(/\s+/g, '-').toLowerCase()}.xlsx`);
+
+        this.exportingClassId = '';
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.error = 'Export failed. Please try again.';
+        this.exportingClassId = '';
         this.cdr.detectChanges();
       },
     });
