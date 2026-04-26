@@ -6,8 +6,13 @@ import { LoginComponent } from './features/auth/login/login.component';
 export const routes: Routes = [
 	{
 		path: '',
-		redirectTo: 'login',
-		pathMatch: 'full',
+		loadComponent: () => import('./features/landing/landing-page/landing-page.component').then(m => m.LandingPageComponent),
+		title: 'Scholaro — The Smart School App',
+	},
+	{
+		path: 'register',
+		loadComponent: () => import('./features/landing/register/register.component').then(m => m.RegisterComponent),
+		title: 'Request a Demo — Scholaro',
 	},
 	{
 		path: 'login',
