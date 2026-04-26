@@ -15,6 +15,9 @@ export class StudentsComponent implements OnInit {
   loading = true;
   error = '';
   classFilter = '';
+  showInactive = false;
+  /** Tracks which student ID is currently being toggled (for loading state). */
+  settingStatusId = '';
 
   private cdr = inject(ChangeDetectorRef);
 
@@ -41,7 +44,30 @@ export class StudentsComponent implements OnInit {
   }
 
   get filteredStudents(): Student[] {
-    if (!this.classFilter) return this.students;
-    return this.students.filter(s => s.current_class === this.classFilter);
+    return this.students.filter(s => {
+      if (!this.showInactive && s.status === 'inactive') return false;
+      if (this.classFilter && s.current_class !== this.classFilter) return false;
+      return true;
+    });
+  }
+
+  get inactiveCount(): number {
+    return this.students.filter(s => s.status === 'inactive').length;
+  }
+
+  setStatus(student: Student, status: 'active' | 'inactive'): void {
+    this.settingStatusId = student.id;
+    this.studentService.setStatus(student.id, status).subscribe({
+      next: (updated) => {
+        const idx = this.students.findIndex(s => s.id === updated.id);
+        if (idx >= 0) this.students[idx] = { ...this.students[idx], status: updated.status };
+        this.settingStatusId = '';
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.settingStatusId = '';
+        this.cdr.detectChanges();
+      },
+    });
   }
 }

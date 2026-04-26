@@ -41,6 +41,18 @@ export interface ParentSearchResult {
   email: string;
 }
 
+export interface BioDataRow {
+  name: string;
+  date_of_birth: string;
+  gender: string;
+  status: string;
+  admission_date: string;
+  class_name: string;
+  section_name: string | null;
+  academic_year: string;
+  joining_class: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StudentService {
   private readonly api = `${environment.apiUrl}/students`;
@@ -83,6 +95,16 @@ export class StudentService {
     return this.http.patch(`${environment.apiUrl}/enrollments/${enrollmentId}/custom-fee`, {
       custom_fee_amount: customFeeAmount,
     });
+  }
+
+  /** Set a student's status to 'active' or 'inactive'. */
+  setStatus(id: string, status: 'active' | 'inactive'): Observable<Student> {
+    return this.http.patch<Student>(`${this.api}/${id}/status`, { status });
+  }
+
+  /** Fetch bio-data rows for all active students in a class (for Excel export). */
+  exportClassBioData(classId: string): Observable<BioDataRow[]> {
+    return this.http.get<BioDataRow[]>(`${this.api}/export/class/${classId}`);
   }
 
   /** Returns id, first_name, last_name for students enrolled in a class.

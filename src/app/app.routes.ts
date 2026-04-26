@@ -101,6 +101,11 @@ export const routes: Routes = [
 				loadComponent: () => import('./features/admin/calendar/admin-calendar.component').then(m => m.AdminCalendarComponent),
 				title: 'Events Calendar',
 			},
+			{
+				path: 'feed',
+				loadComponent: () => import('./features/admin/global-feed/global-feed.component').then(m => m.GlobalFeedComponent),
+				title: 'Global Activity Feed',
+			},
 		],
 	},
 	{

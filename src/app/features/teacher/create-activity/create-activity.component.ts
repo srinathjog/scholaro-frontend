@@ -25,6 +25,8 @@ export class CreateActivityComponent implements OnInit {
 
   audienceType: 'class' | 'student' = 'class';
   students: any[] = [];
+  /** UUIDs of the students currently checked in the multi-select list. */
+  selectedStudentIds: string[] = [];
   form!: FormGroup;
   assignments: TeacherAssignment[] = [];
   selectedFiles: File[] = [];
@@ -79,7 +81,6 @@ export class CreateActivityComponent implements OnInit {
       activity_type: ['moment'],
       title: ['', [Validators.required, Validators.maxLength(255)]],
       description: [''],
-      student_id: [''],
     });
 
     this.form.get('class_id')?.valueChanges.subscribe(() => {
@@ -134,12 +135,26 @@ export class CreateActivityComponent implements OnInit {
     return !!this.form.get('class_id')?.value;
   }
 
+  /** Toggle a student in/out of the selectedStudentIds array. */
+  toggleStudent(studentId: string): void {
+    const idx = this.selectedStudentIds.indexOf(studentId);
+    if (idx >= 0) {
+      this.selectedStudentIds.splice(idx, 1);
+    } else {
+      this.selectedStudentIds.push(studentId);
+    }
+  }
+
+  isStudentSelected(studentId: string): boolean {
+    return this.selectedStudentIds.includes(studentId);
+  }
+
   onClassChange(): void {
     const classId = this.form.value.class_id;
 
     // Always reset previously selected student when class changes
     this.students = [];
-    this.form.get('student_id')?.setValue('', { emitEvent: false });
+    this.selectedStudentIds = [];
     this.attendanceMissing = false;
 
     if (!classId) return;
@@ -391,9 +406,9 @@ export class CreateActivityComponent implements OnInit {
         media_urls: mediaUrls,
         media_types: mediaTypes,
       };
-      // Include student_id if posting to a specific student
-      if (this.audienceType === 'student' && this.form.value.student_id) {
-        (payload as any).student_id = this.form.value.student_id;
+      // Include student_ids if posting to specific students
+      if (this.audienceType === 'student' && this.selectedStudentIds.length > 0) {
+        payload.student_ids = [...this.selectedStudentIds];
       }
 
       // ── Step 4: POST to backend ───────────────────────────────────────────
@@ -406,6 +421,7 @@ export class CreateActivityComponent implements OnInit {
       this.isVideoFile = [];
       this.videoError = '';
       this.students = [];
+      this.selectedStudentIds = [];
       this.audienceType = 'class';
       this.cdr.detectChanges();
       setTimeout(() => this.router.navigate(['/teacher/history']), 1500);

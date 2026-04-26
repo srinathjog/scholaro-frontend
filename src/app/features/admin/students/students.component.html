@@ -10,7 +10,7 @@
   </div>
 
   <!-- Filter Bar -->
-  <div *ngIf="!loading && students.length > 0" class="mb-4 flex items-center gap-3">
+  <div *ngIf="!loading && students.length > 0" class="mb-4 flex flex-wrap items-center gap-3">
     <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filter by Class</label>
     <select [(ngModel)]="classFilter"
             class="w-auto pr-8 px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-800 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none shadow-sm">
@@ -18,6 +18,25 @@
       <option *ngFor="let c of classNames" [value]="c">{{ c }}</option>
     </select>
     <button *ngIf="classFilter" (click)="classFilter = ''" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium">Clear</button>
+
+    <!-- Inactive toggle -->
+    <div class="ml-auto flex items-center gap-2">
+      <label class="relative inline-flex items-center cursor-pointer">
+        <input type="checkbox" [(ngModel)]="showInactive" class="sr-only peer" />
+        <div class="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-red-300 rounded-full peer
+                    peer-checked:after:translate-x-full peer-checked:after:border-white
+                    after:content-[''] after:absolute after:top-0.5 after:left-[2px]
+                    after:bg-white after:border-gray-300 after:border after:rounded-full
+                    after:h-4 after:w-4 after:transition-all peer-checked:bg-red-400"></div>
+        <span class="ml-2 text-xs font-semibold text-gray-600">
+          Show Inactive
+          <span *ngIf="inactiveCount > 0"
+                class="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-600 text-[10px] font-bold">
+            {{ inactiveCount }}
+          </span>
+        </span>
+      </label>
+    </div>
   </div>
 
   <!-- Loading -->
@@ -45,7 +64,7 @@
   <div *ngIf="!loading && students.length > 0"
        class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
     <div class="overflow-x-auto">
-    <table class="w-full text-sm min-w-[600px]">
+    <table class="w-full text-sm min-w-[700px]">
       <thead class="bg-gray-50/80">
         <tr>
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">#</th>
@@ -54,12 +73,14 @@
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Gender</th>
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">DOB</th>
           <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+          <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100">
         <tr *ngFor="let s of filteredStudents; let i = index"
             [routerLink]="['/admin/students', s.id]"
-            class="hover:bg-gray-50/50 transition-colors cursor-pointer">
+            class="hover:bg-gray-50/50 transition-colors cursor-pointer"
+            [class.opacity-60]="s.status === 'inactive'">
           <td class="px-5 py-3.5 text-gray-400 font-mono text-xs">{{ i + 1 }}</td>
           <td class="px-5 py-3.5 font-medium text-gray-900">{{ s.first_name | titlecase }} {{ s.last_name | titlecase }}</td>
           <td class="px-5 py-3.5">
@@ -72,9 +93,35 @@
           <td class="px-5 py-3.5 text-gray-600">{{ s.date_of_birth | date:'mediumDate' }}</td>
           <td class="px-5 py-3.5">
             <span class="px-2 py-0.5 rounded-full text-xs font-medium"
-                  [ngClass]="s.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'">
-              {{ s.status }}
+                  [ngClass]="{
+                    'bg-green-50 text-green-700 border border-green-100': s.status === 'active',
+                    'bg-red-50 text-red-600 border border-red-100': s.status === 'inactive',
+                    'bg-gray-100 text-gray-500': s.status !== 'active' && s.status !== 'inactive'
+                  }">
+              {{ s.status === 'inactive' ? '🚫 Inactive' : s.status }}
             </span>
+          </td>
+          <td class="px-5 py-3.5" (click)="$event.stopPropagation()">
+            <!-- Deactivate -->
+            <button *ngIf="s.status !== 'inactive'"
+                    (click)="setStatus(s, 'inactive')"
+                    [disabled]="settingStatusId === s.id"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold
+                           text-red-600 bg-red-50 border border-red-100
+                           hover:bg-red-100 transition-colors disabled:opacity-50">
+              <ng-container *ngIf="settingStatusId === s.id; else deactivateLabel">…</ng-container>
+              <ng-template #deactivateLabel>🚫 Deactivate</ng-template>
+            </button>
+            <!-- Activate -->
+            <button *ngIf="s.status === 'inactive'"
+                    (click)="setStatus(s, 'active')"
+                    [disabled]="settingStatusId === s.id"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold
+                           text-green-700 bg-green-50 border border-green-100
+                           hover:bg-green-100 transition-colors disabled:opacity-50">
+              <ng-container *ngIf="settingStatusId === s.id; else activateLabel">…</ng-container>
+              <ng-template #activateLabel>✅ Activate</ng-template>
+            </button>
           </td>
         </tr>
       </tbody>
