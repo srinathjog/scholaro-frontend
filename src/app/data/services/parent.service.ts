@@ -168,7 +168,7 @@ export class ParentService {
 
     const sources: any = {
       activities: this.http.get<any>(`${this.apiUrl}/activities/feed`, {
-        params: { class_id: classId, ...(enrollmentId ? { enrollment_id: enrollmentId } : {}), page: '1', limit: '10' },
+        params: { class_id: classId, ...(enrollmentId ? { enrollment_id: enrollmentId } : {}), date, page: '1', limit: '20' },
       }),
       logs: this.http.get<DailyLog[]>(
         `${this.apiUrl}/daily-logs/student/${enrollmentId}`,

@@ -56,7 +56,7 @@
     <button type="submit"
       class="w-full bg-gradient-to-r from-blue-500 to-green-400 text-white py-2.5 rounded-lg font-bold text-lg shadow-md hover:from-blue-600 hover:to-green-500 transition disabled:opacity-60 disabled:cursor-not-allowed"
       [disabled]="loading">
-      {{ loading ? 'Logging in...' : 'Login' }}
+      {{ loading ? buttonLabel : 'Login' }}
     </button>
 
     <!-- Error Message -->

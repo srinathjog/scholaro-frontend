@@ -82,6 +82,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
 
   /** Share the whole post (text + all images) */
   async sharePost(item: any): Promise<void> {
+    const schoolName = this.auth.getSchoolName() || 'School';
     try {
       const shareText = this.formatActivityTitle(item).replace(/<[^>]+>/g, '') + (item.description ? '\n' + item.description : '');
       const files: File[] = [];
@@ -95,7 +96,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
       if ((navigator as any).canShare && (navigator as any).canShare({ files })) {
         await (navigator as any).share({
           files,
-          title: 'Scholaro Update',
+          title: `${schoolName} — Classroom Update`,
           text: shareText
         });
       } else {
@@ -522,6 +523,13 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
 
 
 
+  /** Fade in an image once it's fully loaded — hides the gray shimmer behind it */
+  onImgLoad(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.classList.remove('opacity-0');
+    img.classList.add('opacity-100');
+  }
+
   /** trackBy functions for *ngFor performance */
   trackChild(_: number, child: ParentChild): string { return child.id; }
   trackTimelineItem(_: number, item: TimelineItem): string { return item.id || `${item.type}-${item.created_at}`; }
@@ -551,8 +559,9 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
 
   /** Social Sharing: Share image using Web Share API or fallback */
   async shareImage(imageUrl: string, title: string): Promise<void> {
+    const schoolName = this.auth.getSchoolName() || 'School';
     try {
-      const shareText = 'Proud moment at Kids Castle Borewell Road via Scholaro App!';
+      const shareText = `Proud moment at ${schoolName}! 🌟 Check out this classroom update via Scholaro.`;
       // Fetch the image as a Blob
       const response = await fetch(imageUrl);
       const blob = await response.blob();
@@ -599,9 +608,20 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   }
 
   /** Determine a daily status message from today's mood/meal logs */
+  /** Count of activity-type items in the timeline that fall on today's actual system date. */
+  get todayActivitiesCount(): number {
+    const todayStr = todayLocal(); // YYYY-MM-DD
+    return this.timeline.filter(i =>
+      i.type === 'activity' && (i.created_at || '').slice(0, 10) === todayStr
+    ).length;
+  }
+
   get dailyStatus(): string {
     const name = this.selectedChild?.first_name || 'Your child';
-    if (!this.timeline.length) return '';
+    if (!this.timeline.length) {
+      // Empty feed — only show a message when viewing today
+      return this.isToday ? `No updates for ${name} yet today` : '';
+    }
 
     // Security status takes priority on today
     if (this.isToday) {
@@ -609,30 +629,42 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
       if (this.isCheckedIn) return `${name} is at school — safe and sound! 🛡️`;
     }
 
-    // If child was absent, show away message
+    // If child was absent
     if (this.isChildAbsent) {
-      return `${name} was away today. Here's what the class did! 🏠`;
+      const when = this.isToday ? 'today' : `on ${this.displayDate}`;
+      return `${name} was away ${when}. Here's what the class did! 🏠`;
     }
 
     // Check for mood logs first
     const moodLog = this.timeline.find(i => i.type === 'daily_log' && i.category === 'mood');
     if (moodLog) {
       const val = moodLog.log_value || '';
-      if (val === 'happy' || val === 'playful') return `${name} is having a great day! 🌟`;
-      if (val === 'fussy' || val === 'cranky') return `${name} is a little fussy today 💛`;
-      if (val === 'quiet') return `${name} is having a quiet day 🤫`;
+      if (val === 'happy' || val === 'playful') {
+        return this.isToday ? `${name} is having a great day! 🌟` : `${name} had a great day on ${this.displayDate}! 🌟`;
+      }
+      if (val === 'fussy' || val === 'cranky') {
+        return this.isToday ? `${name} is a little fussy today 💛` : `${name} was a little fussy on ${this.displayDate} 💛`;
+      }
+      if (val === 'quiet') {
+        return this.isToday ? `${name} is having a quiet day 🤫` : `${name} had a quiet day on ${this.displayDate} 🤫`;
+      }
     }
 
     // Fallback to meal
     const mealLog = this.timeline.find(i => i.type === 'daily_log' && i.category === 'meal');
-    if (mealLog?.log_value === 'finished') return `${name} ate well today! 🍽️`;
-    if (mealLog?.log_value === 'not_eaten') return `${name} skipped a meal 🥺`;
+    const when = this.isToday ? 'today' : `on ${this.displayDate}`;
+    if (mealLog?.log_value === 'finished') return `${name} ate well ${when}! 🍽️`;
+    if (mealLog?.log_value === 'not_eaten') return `${name} skipped a meal ${when} 🥺`;
 
     // Fall back to activity count
-    const actCount = this.timeline.filter(i => i.type === 'activity').length;
-    if (actCount > 0) return `${name} had ${actCount} activit${actCount > 1 ? 'ies' : 'y'} today! 📸`;
+    const actCount = this.todayActivitiesCount;
+    if (actCount > 0) {
+      return this.isToday
+        ? `${name} had ${actCount} activit${actCount > 1 ? 'ies' : 'y'} today! 📸`
+        : `${name} had ${actCount} activit${actCount > 1 ? 'ies' : 'y'} on ${this.displayDate}! 📸`;
+    }
 
-    return `${name}'s day is underway ☀️`;
+    return this.isToday ? `${name}'s day is underway ☀️` : `${name}'s day on ${this.displayDate}`;
   }
 
   /** Get current class name */

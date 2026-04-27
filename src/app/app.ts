@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef, Inject } from '@angular/core';
 import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { RouterOutlet, ActivatedRoute } from '@angular/router';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { filter, switchMap } from 'rxjs/operators';
 import { interval, Subscription as RxSubscription } from 'rxjs';
@@ -11,18 +11,17 @@ import { environment } from '../environments/environment';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, CommonModule],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
 export class App implements OnInit, OnDestroy {
   private cdr = inject(ChangeDetectorRef);
   private sub?: Subscription;
-  // ...existing code...
   private swUpdatePollSub?: RxSubscription;
-
-  // SwUpdate subscription
   private swUpdateSub?: Subscription;
+
+  showUpdateToast = false;
 
   constructor(
     private authService: AuthService,
@@ -57,22 +56,13 @@ export class App implements OnInit, OnDestroy {
       },
     });
 
-    // --- Silent Auto-Update Logic ---
+    // --- Update Toast Logic ---
     if (this.swUpdate.isEnabled) {
-      this.swUpdateSub = this.swUpdate.versionUpdates.subscribe(event => {
-        if (event.type === 'VERSION_READY') {
-          console.log('[PWA] New version detected, activating update...');
-          this.swUpdate.activateUpdate().then(() => {
-            // Only reload if not on login page and document is visible
-            const isLogin = this.document.location.pathname.includes('login');
-            if (!isLogin && !this.document.hidden) {
-              console.log('[PWA] Update activated, reloading page.');
-              this.document.defaultView?.location.reload();
-            } else {
-              console.log('[PWA] Update activated, but reload skipped (login page or hidden).');
-            }
-          });
-        }
+      this.swUpdateSub = this.swUpdate.versionUpdates.pipe(
+        filter((e): e is VersionReadyEvent => e.type === 'VERSION_READY'),
+      ).subscribe(() => {
+        this.showUpdateToast = true;
+        this.cdr.detectChanges();
       });
 
       // --- Background Heartbeat Polling ---
@@ -103,6 +93,14 @@ export class App implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
     this.swUpdateSub?.unsubscribe();
     this.swUpdatePollSub?.unsubscribe();
+  }
+
+  applyUpdate(): void {
+    this.swUpdate.activateUpdate().then(() => {
+      this.document.defaultView?.location.reload();
+    }).catch(() => {
+      this.document.defaultView?.location.reload();
+    });
   }
 
   private setupDynamicBranding(): void {

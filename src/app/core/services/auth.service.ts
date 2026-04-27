@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, tap, timeout } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 import { TenantService } from './tenant.service';
 import { environment } from '../../../environments/environment';
@@ -51,10 +51,13 @@ export class AuthService {
   }
 
   login(email: string, password: string, schoolCode: string): Observable<any> {
+    console.time('loginCall');
     return this.http.post<any>(`${environment.apiUrl}/auth/login`, {
       email, password, school_code: schoolCode || undefined,
     }).pipe(
+      timeout(10000),
       tap((res) => {
+        console.timeEnd('loginCall');
         if (res && res.access_token) {
           localStorage.setItem(this.TOKEN_KEY, res.access_token);
           const payload = this.decodeToken(res.access_token);
