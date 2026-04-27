@@ -1,8 +1,14 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 /**
- * Converts a date/ISO string to a human-readable relative time string.
- * "Just now", "2m ago", "1h ago", "3h ago", then falls back to shortTime for older.
+ * Smart timeline date pipe.
+ *
+ * - < 60s:       "Just now"
+ * - < 60m:       "5 mins ago"
+ * - < 12h:       "3 hours ago"
+ * - Today:       "Today at 1:37 PM"
+ * - Yesterday:   "Yesterday at 1:37 PM"
+ * - Older:       "Friday, 24 Apr at 1:37 PM"
  *
  * Usage: {{ item.created_at | timeAgo }}
  */
@@ -11,9 +17,9 @@ export class TimeAgoPipe implements PipeTransform {
   transform(value: string | Date | null | undefined): string {
     if (!value) return '';
 
-    const now = Date.now();
-    const then = new Date(value).getTime();
-    const diffMs = now - then;
+    const d = new Date(value);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
 
     if (diffMs < 0) return 'Just now';
 
@@ -27,8 +33,24 @@ export class TimeAgoPipe implements PipeTransform {
     if (hours === 1) return '1 hour ago';
     if (hours < 12) return `${hours} hours ago`;
 
-    // Older than 12 hours — show absolute time
-    const d = new Date(value);
-    return d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+    // Compare calendar dates in local time
+    const timeStr = d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart.getTime() - 86400000);
+    const dStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+    if (dStart.getTime() === todayStart.getTime()) {
+      return `Today at ${timeStr}`;
+    }
+    if (dStart.getTime() === yesterdayStart.getTime()) {
+      return `Yesterday at ${timeStr}`;
+    }
+
+    // Older — "Friday, 24 Apr at 1:37 PM"
+    const dayName = d.toLocaleDateString('en-IN', { weekday: 'long' });
+    const dayNum = d.getDate();
+    const month = d.toLocaleDateString('en-IN', { month: 'short' });
+    return `${dayName}, ${dayNum} ${month} at ${timeStr}`;
   }
 }

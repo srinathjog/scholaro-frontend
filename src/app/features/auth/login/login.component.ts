@@ -20,7 +20,9 @@ export class LoginComponent implements OnInit {
   loginForm: FormGroup;
   errorMessage: string | null = null;
   loading = false;
+  buttonLabel = 'Logging in...';
   isSuperAdmin = false;
+  private slowTimer: ReturnType<typeof setTimeout> | null = null;
   codeFromUrl = false;
   schoolName = '';
 
@@ -87,10 +89,16 @@ export class LoginComponent implements OnInit {
       return;
     }
     this.loading = true;
+    this.buttonLabel = 'Logging in...';
+    this.slowTimer = setTimeout(() => {
+      this.buttonLabel = 'Still working... checking connection';
+      this.cdr.markForCheck();
+    }, 3000);
     const { email, password, schoolCode } = this.loginForm.value;
     const tenantId = this.isSuperAdmin ? '' : (schoolCode || '').trim();
     this.authService.login(email, password, tenantId).subscribe({
       next: (user: any) => {
+        if (this.slowTimer) { clearTimeout(this.slowTimer); this.slowTimer = null; }
         this.loading = false;
         const roles = this.authService.getRoles();
         if (roles.includes('SUPER_ADMIN')) {
@@ -106,8 +114,13 @@ export class LoginComponent implements OnInit {
         }
       },
       error: (err: any) => {
+        if (this.slowTimer) { clearTimeout(this.slowTimer); this.slowTimer = null; }
         this.loading = false;
-        this.errorMessage = err?.error?.message || err?.message || 'Invalid Credentials';
+        if (err?.name === 'TimeoutError') {
+          this.errorMessage = 'Connection to school server is slow. Please check your data and try again.';
+        } else {
+          this.errorMessage = err?.error?.message || err?.message || 'Invalid credentials. Please try again.';
+        }
         console.error('Login error:', err);
         this.cdr.markForCheck();
       }

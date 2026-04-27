@@ -45,7 +45,7 @@
   </div>
 
   <!-- ─── HEADER ─── -->
-  <div class="sticky top-0 z-30 bg-white border-b border-orange-100/60">
+  <div class="sticky top-16 z-30 bg-white/95 backdrop-blur-md border-b border-orange-100/60 shadow-sm">
     <div class="max-w-lg mx-auto px-4 pt-3 pb-2.5">
 
       <!-- Top row: child selector + refresh -->
@@ -277,14 +277,17 @@
                     ▶️ Video
                   </span>
                 </div>
-                <!-- Image — overflow-hidden on wrapper clips the zoom inside the card -->
-                <div *ngIf="item.media[0].media_type !== 'video'" class="overflow-hidden">
+                <!-- Image — shimmer placeholder + fade-in on load -->
+                <div *ngIf="item.media[0].media_type !== 'video'" class="overflow-hidden relative bg-gray-200">
+                  <div class="absolute inset-0 bg-gray-200 animate-pulse" aria-hidden="true"></div>
                   <img [src]="item.media[0].media_url"
                        [alt]="item.title || 'Photo'"
-                       class="w-full aspect-[4/3] object-cover cursor-pointer
-                              transition-transform duration-300 ease-out hover:scale-105"
+                       class="w-full aspect-[4/3] object-cover cursor-pointer relative
+                              opacity-0 transition-all duration-500 ease-out
+                              hover:scale-105"
                        (click)="openLightboxForActivity(item, item.media[0].media_url)"
-                       loading="lazy" />
+                       loading="lazy"
+                       (load)="onImgLoad($event)" />
                 </div>
               </ng-container>
             </div>
@@ -310,15 +313,18 @@
                         </div>
                       </div>
                     </ng-container>
-                    <!-- Image cell -->
+                    <!-- Image cell — shimmer placeholder + fade-in on load -->
                     <ng-template #imgCell>
+                      <div class="absolute inset-0 bg-gray-200 animate-pulse" aria-hidden="true"></div>
                       <img [src]="m.media_url"
                            [alt]="item.title || 'Photo'"
-                           class="w-full aspect-square object-cover cursor-pointer
-                                  transition-transform duration-200 hover:scale-105"
+                           class="w-full aspect-square object-cover cursor-pointer relative
+                                  opacity-0 transition-all duration-500 ease-out
+                                  hover:scale-105"
                            [class.brightness-50]="j === 3 && item.media.length > 4"
                            (click)="openLightboxForActivity(item, m.media_url)"
-                           loading="lazy" />
+                           loading="lazy"
+                           (load)="onImgLoad($event)" />
                       <!-- "+N more" overlay on 4th cell when there are hidden photos -->
                       <div *ngIf="j === 3 && item.media.length > 4"
                            class="absolute inset-0 flex items-center justify-center

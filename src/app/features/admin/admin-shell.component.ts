@@ -13,7 +13,7 @@ import { filter } from 'rxjs/operators';
     <div class="min-h-screen bg-gray-50">
 
       <!-- ══════════ Mobile Top Bar (< 1024px) ══════════ -->
-      <header class="lg:hidden fixed top-0 inset-x-0 z-40 bg-white border-b border-gray-200 h-14 flex items-center px-4 gap-3">
+      <header class="lg:hidden fixed top-0 inset-x-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200/80 shadow-sm h-16 flex items-center px-4 gap-3">
         <button (click)="sidebarOpen = true"
                 class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors -ml-1">
           <svg class="w-6 h-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -205,7 +205,7 @@ import { filter } from 'rxjs/operators';
       </aside>
 
       <!-- ══════════ Main Content ══════════ -->
-      <main class="lg:ml-60 pt-14 lg:pt-0 min-h-screen">
+      <main class="lg:ml-60 pt-20 lg:pt-0 min-h-screen">
         <router-outlet></router-outlet>
       </main>
     </div>
