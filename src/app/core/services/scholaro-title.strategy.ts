@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { RouterStateSnapshot, TitleStrategy } from '@angular/router';
 import { AuthService } from './auth.service';
@@ -8,19 +8,23 @@ import { AuthService } from './auth.service';
  *   Authenticated: "Page Name | School Name"
  *   Public:        "Page Name | Scholaro"
  *   Fallback:      "School Name | Scholaro" or "Scholaro"
+ *
+ * AuthService is resolved lazily via Injector to break the circular DI cycle:
+ *   AuthService -> Router -> TitleStrategy -> AuthService
  */
 @Injectable({ providedIn: 'root' })
 export class ScholaroTitleStrategy extends TitleStrategy {
   constructor(
     private readonly title: Title,
-    private readonly auth: AuthService,
+    private readonly injector: Injector,
   ) {
     super();
   }
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
     const pageTitle = this.buildTitle(snapshot);
-    const schoolName = this.auth.getSchoolName();
+    // Lazy resolution avoids the circular dependency at construction time
+    const schoolName = this.injector.get(AuthService).getSchoolName();
 
     if (pageTitle) {
       this.title.setTitle(schoolName ? `${pageTitle} | ${schoolName}` : `${pageTitle} | Scholaro`);
