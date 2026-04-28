@@ -32,6 +32,12 @@ export class SettingsService {
     return this.http.get<BrandingSettings>(`${this.api}/branding`);
   }
 
+  uploadLogo(file: File): Observable<{ url: string }> {
+    const form = new FormData();
+    form.append('logo', file);
+    return this.http.post<{ url: string }>(`${this.api}/branding/logo`, form);
+  }
+
   updateBranding(payload: UpdateBrandingPayload): Observable<BrandingSettings> {
     return this.http.patch<BrandingSettings>(`${this.api}/branding`, payload);
   }
