@@ -131,7 +131,7 @@ export class ParentService {
     date?: string,
     studentId?: string,
   ): Observable<TimelineResult> {
-    const d = date || new Date().toISOString().slice(0, 10);
+    const d = date || todayLocal();
     const cacheKey = `${enrollmentId}_${classId}_${d}_${studentId || ''}`;
     const cached = this.timelineData.get(cacheKey);
 
@@ -168,7 +168,7 @@ export class ParentService {
 
     const sources: any = {
       activities: this.http.get<any>(`${this.apiUrl}/activities/feed`, {
-        params: { class_id: classId, ...(enrollmentId ? { enrollment_id: enrollmentId } : {}), date, page: '1', limit: '20' },
+        params: { class_id: classId, ...(enrollmentId ? { enrollment_id: enrollmentId } : {}), page: '1', limit: '15' },
       }),
       logs: this.http.get<DailyLog[]>(
         `${this.apiUrl}/daily-logs/student/${enrollmentId}`,

@@ -21,4 +21,8 @@ export class StaffService {
   getAll(): Observable<StaffMember[]> {
     return this.http.get<StaffMember[]>(`${this.api}/staff`);
   }
+
+  remove(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.api}/${id}`);
+  }
 }

@@ -27,6 +27,9 @@ export class ClassListComponent implements OnInit {
   error = '';
   /** Tracks which class ID is currently being exported (for loading state). */
   exportingClassId = '';
+  /** The class card pending deletion (triggers confirmation modal). */
+  deleteTarget: ClassCard | null = null;
+  deleting = false;
 
   private cdr = inject(ChangeDetectorRef);
 
@@ -105,6 +108,34 @@ export class ClassListComponent implements OnInit {
       },
       error: (err) => {
         this.error = err.error?.message || 'Failed to create section';
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  confirmDelete(card: ClassCard): void {
+    this.deleteTarget = card;
+    this.error = '';
+  }
+
+  cancelDelete(): void {
+    this.deleteTarget = null;
+  }
+
+  executeDelete(): void {
+    if (!this.deleteTarget) return;
+    this.deleting = true;
+    this.academicService.deleteClass(this.deleteTarget.cls.id).subscribe({
+      next: () => {
+        this.cards = this.cards.filter(c => c.cls.id !== this.deleteTarget!.cls.id);
+        this.deleteTarget = null;
+        this.deleting = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.error = err?.error?.message || 'Failed to delete class.';
+        this.deleteTarget = null;
+        this.deleting = false;
         this.cdr.detectChanges();
       },
     });
