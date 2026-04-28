@@ -107,4 +107,8 @@ export class AcademicService {
   deleteAssignment(id: string): Observable<void> {
     return this.http.delete<void>(`${this.api}/teacher-assignments/${id}`);
   }
+
+  deleteClass(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.api}/classes/${id}`);
+  }
 }

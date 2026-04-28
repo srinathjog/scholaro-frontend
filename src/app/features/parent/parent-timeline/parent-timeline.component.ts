@@ -2,7 +2,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ElementRef, ViewChild, AfterViewInit, HostListener } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { filter, switchMap } from 'rxjs/operators';
@@ -14,13 +13,12 @@ import {
 } from '../../../data/services/parent.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { PushNotificationService } from '../../../core/services/push-notification.service';
-import { todayLocal } from '../../../utils/date.util';
 import { TimeAgoPipe } from '../../../shared/pipes/time-ago.pipe';
 
 @Component({
   selector: 'app-parent-timeline',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TimeAgoPipe],
+  imports: [CommonModule, RouterModule, TimeAgoPipe],
   templateUrl: './parent-timeline.component.html',
   animations: [
     // Backdrop fades in/out
@@ -129,9 +127,6 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   selectedEnrollmentId = '';
   selectedClassId = '';
 
-  // Date navigation
-  selectedDate = todayLocal(); // YYYY-MM-DD
-
   // UI state
   loading = false;
   loadingChildren = true;
@@ -143,6 +138,9 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   currentPage = 1;
   hasNextPage = false;
   loadingMore = false;
+
+  /** True when there are no more pages to load — used to hide the sentinel. */
+  get isFullListLoaded(): boolean { return !this.hasNextPage; }
   private scrollObserver: IntersectionObserver | null = null;
   private pushSub?: Subscription;
   private pollSub?: Subscription;
@@ -312,7 +310,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
       return;
     }
     this.parentService
-      .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
+      .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, undefined, this.selectedChild?.id)
       .subscribe({
         next: (result) => {
           this.timeline = result.items;
@@ -431,7 +429,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     this.hasNextPage = false;
 
     this.parentService
-      .getTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
+      .getTimeline(this.selectedEnrollmentId, this.selectedClassId, undefined, this.selectedChild?.id)
       .subscribe({
         next: (result) => {
           this.timeline = result.items;
@@ -455,7 +453,7 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     this.refreshing = true;
     if (!this.selectedEnrollmentId || !this.selectedClassId) return;
     this.parentService
-      .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, this.selectedDate, this.selectedChild?.id)
+      .refreshTimeline(this.selectedEnrollmentId, this.selectedClassId, undefined, this.selectedChild?.id)
       .subscribe({
         next: (result) => {
           this.timeline = result.items;
@@ -472,49 +470,10 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
       });
   }
 
-  /** Navigate to previous day */
-  previousDay(): void {
-    const d = new Date(this.selectedDate);
-    d.setDate(d.getDate() - 1);
-    this.selectedDate = d.toISOString().slice(0, 10);
-    this.loadTimeline();
-  }
-
-  /** Navigate to next day */
-  nextDay(): void {
-    const d = new Date(this.selectedDate);
-    d.setDate(d.getDate() + 1);
-    const today = todayLocal();
-    if (d.toISOString().slice(0, 10) <= today) {
-      this.selectedDate = d.toISOString().slice(0, 10);
-      this.loadTimeline();
-    }
-  }
-
-  /** Jump to a specific date via the date picker */
-  onDateChange(): void {
-    this.loadTimeline();
-  }
-
-  /** Check if selected date is today */
-  get isToday(): boolean {
-    return this.selectedDate === todayLocal();
-  }
-
-  /** Format selected date for display */
-  get displayDate(): string {
-    const d = new Date(this.selectedDate + 'T00:00:00');
-    if (this.isToday) return 'Today';
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-    if (this.selectedDate === yStr) return 'Yesterday';
-    return d.toLocaleDateString('en-IN', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    });
-  }
+  /** No-op stubs kept so HTML template references don't break */
+  previousDay(): void {}
+  nextDay(): void {}
+  onDateChange(): void {}
 
   /** Format log value for display */
   formatLogValue(value: string): string {
@@ -534,6 +493,37 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
   trackChild(_: number, child: ParentChild): string { return child.id; }
   trackTimelineItem(_: number, item: TimelineItem): string { return item.id || `${item.type}-${item.created_at}`; }
   trackMedia(_: number, m: any): string { return m.media_url || m.id; }
+
+  /**
+   * Returns the IST calendar date string (YYYY-MM-DD) for a timeline item.
+   * Used to decide when to render a date divider in the feed.
+   */
+  getItemDate(item: TimelineItem): string {
+    const raw = item.created_at || '';
+    if (!raw) return '';
+    const d = new Date(raw);
+    // Convert to IST (UTC+5:30)
+    const ist = new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+    return ist.toISOString().slice(0, 10);
+  }
+
+  /**
+   * Formats a YYYY-MM-DD string into a human-readable divider label,
+   * e.g. "Today", "Yesterday", "Monday, 27 April".
+   */
+  formatDividerDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    if (dateStr === todayStr) return 'Today';
+    const yest = new Date(today);
+    yest.setDate(today.getDate() - 1);
+    const yestStr = `${yest.getFullYear()}-${String(yest.getMonth() + 1).padStart(2, '0')}-${String(yest.getDate()).padStart(2, '0')}`;
+    if (dateStr === yestStr) return 'Yesterday';
+    return date.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
 
   /** Download image using HttpClient and force save to gallery */
   downloadImage(imageUrl: string): void {
@@ -589,9 +579,8 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     return (child.first_name?.[0] || '') + (child.last_name?.[0] || '');
   }
 
-  /** Jump back to today */
+  /** Jump back to today — in infinite scroll mode just reloads the feed */
   jumpToToday(): void {
-    this.selectedDate = todayLocal();
     this.loadTimeline();
   }
 
@@ -607,64 +596,73 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     return `${name} — ${this.formatLogValue(val)}`;
   }
 
-  /** Determine a daily status message from today's mood/meal logs */
-  /** Count of activity-type items in the timeline that fall on today's actual system date. */
-  get todayActivitiesCount(): number {
-    const todayStr = todayLocal(); // YYYY-MM-DD
-    return this.timeline.filter(i =>
-      i.type === 'activity' && (i.created_at || '').slice(0, 10) === todayStr
-    ).length;
+  /** IST calendar date string for today, used to scope daily-status logic. */
+  private get todayISTStr(): string {
+    const now = new Date();
+    const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000);
+    return ist.toISOString().slice(0, 10);
   }
+
+  /** Timeline items that belong to today (IST). */
+  private get todayItems(): TimelineItem[] {
+    const today = this.todayISTStr;
+    return this.timeline.filter(i => this.getItemDate(i) === today);
+  }
+
+  /** Activity count for today only (not the whole infinite-scroll feed). */
+  get todayActivitiesCount(): number {
+    return this.todayItems.filter(i => i.type === 'activity').length;
+  }
+
+  /** Always true in infinite scroll mode — the feed is not date-filtered. */
+  get isToday(): boolean { return true; }
+
+  /** Feed label used in the class header. */
+  get displayDate(): string { return 'Recent'; }
 
   get dailyStatus(): string {
     const name = this.selectedChild?.first_name || 'Your child';
-    if (!this.timeline.length) {
-      // Empty feed — only show a message when viewing today
-      return this.isToday ? `No updates for ${name} yet today` : '';
+    // All daily-status logic is scoped to TODAY's items only, even though
+    // the infinite-scroll feed contains multiple days.
+    const items = this.todayItems;
+
+    if (!items.length) {
+      // Pick a time-aware message based on IST hour so it's never wrong
+      const istHour = new Date(Date.now() + 5.5 * 60 * 60 * 1000).getUTCHours();
+      if (istHour < 8)  return `Good morning! ${name}'s school day is coming up soon 🌤️`;
+      if (istHour < 14) return `${name} is having a wonderful day at school! ✨`;
+      return `${name} had a wonderful day! Updates will appear here soon 🌸`;
     }
 
-    // Security status takes priority on today
-    if (this.isToday) {
-      if (this.isCheckedOut) return `${name} has been picked up safely! 🤝`;
-      if (this.isCheckedIn) return `${name} is at school — safe and sound! 🛡️`;
-    }
+    // Security status takes priority
+    if (this.isCheckedOut) return `${name} has been picked up safely! 🤝`;
+    if (this.isCheckedIn) return `${name} is at school — safe and sound! 🛡️`;
 
-    // If child was absent
-    if (this.isChildAbsent) {
-      const when = this.isToday ? 'today' : `on ${this.displayDate}`;
-      return `${name} was away ${when}. Here's what the class did! 🏠`;
-    }
+    // If child was absent today
+    const todayAbsent = items.every(i => i.type === 'activity' && i.is_present === false);
+    if (todayAbsent) return `${name} was away today. Here's what the class did! 🏠`;
 
-    // Check for mood logs first
-    const moodLog = this.timeline.find(i => i.type === 'daily_log' && i.category === 'mood');
+    // Mood log (today only)
+    const moodLog = items.find(i => i.type === 'daily_log' && i.category === 'mood');
     if (moodLog) {
       const val = moodLog.log_value || '';
-      if (val === 'happy' || val === 'playful') {
-        return this.isToday ? `${name} is having a great day! 🌟` : `${name} had a great day on ${this.displayDate}! 🌟`;
-      }
-      if (val === 'fussy' || val === 'cranky') {
-        return this.isToday ? `${name} is a little fussy today 💛` : `${name} was a little fussy on ${this.displayDate} 💛`;
-      }
-      if (val === 'quiet') {
-        return this.isToday ? `${name} is having a quiet day 🤫` : `${name} had a quiet day on ${this.displayDate} 🤫`;
-      }
+      if (val === 'happy' || val === 'playful') return `${name} is having a great day! 🌟`;
+      if (val === 'fussy' || val === 'cranky') return `${name} is a little fussy today 💛`;
+      if (val === 'quiet') return `${name} is having a quiet day 🤫`;
     }
 
-    // Fallback to meal
-    const mealLog = this.timeline.find(i => i.type === 'daily_log' && i.category === 'meal');
-    const when = this.isToday ? 'today' : `on ${this.displayDate}`;
-    if (mealLog?.log_value === 'finished') return `${name} ate well ${when}! 🍽️`;
-    if (mealLog?.log_value === 'not_eaten') return `${name} skipped a meal ${when} 🥺`;
+    // Meal log (today only)
+    const mealLog = items.find(i => i.type === 'daily_log' && i.category === 'meal');
+    if (mealLog?.log_value === 'finished') return `${name} ate well today! 🍽️`;
+    if (mealLog?.log_value === 'not_eaten') return `${name} skipped a meal today 🥺`;
 
-    // Fall back to activity count
-    const actCount = this.todayActivitiesCount;
+    // Activity count (today only)
+    const actCount = items.filter(i => i.type === 'activity').length;
     if (actCount > 0) {
-      return this.isToday
-        ? `${name} had ${actCount} activit${actCount > 1 ? 'ies' : 'y'} today! 📸`
-        : `${name} had ${actCount} activit${actCount > 1 ? 'ies' : 'y'} on ${this.displayDate}! 📸`;
+      return `${name} had ${actCount} activit${actCount > 1 ? 'ies' : 'y'} today! 📸`;
     }
 
-    return this.isToday ? `${name}'s day is underway ☀️` : `${name}'s day on ${this.displayDate}`;
+    return `${name}'s day is underway ☀️`;
   }
 
   /** Get current class name */

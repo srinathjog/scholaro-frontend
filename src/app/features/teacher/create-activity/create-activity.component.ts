@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import {
@@ -9,7 +9,6 @@ import {
 import { UploadService } from '../../../core/services/upload.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AttendanceService } from '../../../data/services/attendance.service';
-import { VideoCompressionService } from '../../../core/services/video-compression.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { StudentService } from '../../../data/services/student.service';
 
@@ -21,21 +20,30 @@ import { StudentService } from '../../../data/services/student.service';
 })
 export class CreateActivityComponent implements OnInit {
   /** Max total media files (images + videos) allowed per post. */
-  readonly MAX_MEDIA = 20;
+  readonly MAX_MEDIA = 40;
 
   audienceType: 'class' | 'student' = 'class';
+  showStudentList = false;
   students: any[] = [];
+
+  @ViewChild('studentDropdownEl') studentDropdownEl?: ElementRef;
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (
+      this.showStudentList &&
+      this.studentDropdownEl &&
+      !this.studentDropdownEl.nativeElement.contains(event.target as Node)
+    ) {
+      this.showStudentList = false;
+    }
+  }
   /** UUIDs of the students currently checked in the multi-select list. */
   selectedStudentIds: string[] = [];
   form!: FormGroup;
   assignments: TeacherAssignment[] = [];
   selectedFiles: File[] = [];
   previews: string[] = [];
-  isVideoFile: boolean[] = [];   // parallel array: true if selectedFiles[i] is a video
-  videoError = '';
-  videoCompressing = false;
-  videoCompressionProgress = 0;
-  videoCompressionMessage = '';
   loadingPreviews = 0;
   submitting = false;
   uploading = false;
@@ -69,7 +77,6 @@ export class CreateActivityComponent implements OnInit {
     private authService: AuthService,
     private attendanceService: AttendanceService,
     private studentService: StudentService,
-    private videoCompressionService: VideoCompressionService,
     public router: Router,
     private cdr: ChangeDetectorRef,
     private route: ActivatedRoute,
@@ -135,7 +142,7 @@ export class CreateActivityComponent implements OnInit {
     return !!this.form.get('class_id')?.value;
   }
 
-  /** Toggle a student in/out of the selectedStudentIds array. */
+  /** Toggle a student in/out of the selectedStudentIds array and close the dropdown. */
   toggleStudent(studentId: string): void {
     const idx = this.selectedStudentIds.indexOf(studentId);
     if (idx >= 0) {
@@ -143,6 +150,7 @@ export class CreateActivityComponent implements OnInit {
     } else {
       this.selectedStudentIds.push(studentId);
     }
+    this.showStudentList = false;
   }
 
   isStudentSelected(studentId: string): boolean {
@@ -192,92 +200,31 @@ export class CreateActivityComponent implements OnInit {
     }
   }
 
-  /** Validate a video file: max 20 MB and max 30 seconds duration. */
-  private validateVideo(file: File): Promise<string | null> {
-    return new Promise((resolve) => {
-      const MAX_MB = 150;
-      const MAX_SECONDS = 30;
-      if (file.size > MAX_MB * 1024 * 1024) {
-        resolve(`"${file.name}" is too large. Videos must be under ${MAX_MB} MB.`);
-        return;
-      }
-      const url = URL.createObjectURL(file);
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.onloadedmetadata = () => {
-        URL.revokeObjectURL(url);
-        if (video.duration > MAX_SECONDS) {
-          resolve(`"${file.name}" is ${Math.round(video.duration)}s. Videos must be 30 seconds or less.`);
-        } else {
-          resolve(null);
-        }
-      };
-      video.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-      video.src = url;
-    });
-  }
-
   async onFilesSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
     if (!input.files) return;
 
     const rawFiles = Array.from(input.files);
     input.value = '';
-    this.videoError = '';
 
     // ── Hard limit: max MAX_MEDIA files total ─────────────────────────────
     const slotsRemaining = this.MAX_MEDIA - this.selectedFiles.length;
     if (slotsRemaining <= 0) {
-      this.errorMessage = `⚠️ You can upload a maximum of ${this.MAX_MEDIA} photos/videos per post for better quality.`;
+      this.errorMessage = `⚠️ You can upload up to 40 photos for this classroom moment.`;
       this.cdr.detectChanges();
       return;
     }
-    let filesToProcess = rawFiles;
-    if (rawFiles.length > slotsRemaining) {
-      filesToProcess = rawFiles.slice(0, slotsRemaining);
-      this.errorMessage = `⚠️ Only the first ${slotsRemaining} file${slotsRemaining !== 1 ? 's' : ''} were added (${this.MAX_MEDIA}-file limit per post).`;
+    // Only allow image files (video uploads disabled)
+    const imageFiles = rawFiles.filter(f => f.type.startsWith('image/'));
+    let filesToProcess = imageFiles;
+    if (imageFiles.length > slotsRemaining) {
+      filesToProcess = imageFiles.slice(0, slotsRemaining);
+      this.errorMessage = `⚠️ Only the first ${slotsRemaining} photo${slotsRemaining !== 1 ? 's' : ''} were added (40-photo limit per post).`;
     } else {
       this.errorMessage = '';
     }
 
-    // Separate images and videos
-    const imageFiles = filesToProcess.filter(f => f.type.startsWith('image/'));
-    const videoFiles = filesToProcess.filter(f => f.type.startsWith('video/'));
-
-    // Validate videos first
-    for (const vf of videoFiles) {
-      const err = await this.validateVideo(vf);
-      if (err) {
-        this.videoError = err;
-        this.cdr.detectChanges();
-        return;
-      }
-    }
-
-    // Add videos directly (with optional compression for large files)
-    for (const vf of videoFiles) {
-      this.videoCompressing = true;
-      this.videoCompressionProgress = 0;
-      this.videoCompressionMessage = 'Loading compression engine…';
-      this.cdr.detectChanges();
-
-      const compressed = await this.videoCompressionService.compressVideo(
-        vf,
-        (message, pct) => {
-          this.videoCompressionMessage = message;
-          this.videoCompressionProgress = pct;
-          this.cdr.detectChanges();
-        },
-      );
-
-      this.videoCompressing = false;
-      this.selectedFiles.push(compressed);
-      this.isVideoFile.push(true);
-      this.previews.push(URL.createObjectURL(compressed));
-      this.cdr.detectChanges();
-    }
-
-    if (!imageFiles.length) {
+    if (!filesToProcess.length) {
       this.cdr.detectChanges();
       return;
     }
@@ -305,11 +252,9 @@ export class CreateActivityComponent implements OnInit {
       try {
         const compressed = await imageCompression(file, options);
         this.selectedFiles.push(compressed);
-        this.isVideoFile.push(false);
         this.previews.push(URL.createObjectURL(compressed));
       } catch {
         this.selectedFiles.push(file);
-        this.isVideoFile.push(false);
         this.previews.push(URL.createObjectURL(file));
       }
       processed++;
@@ -324,8 +269,6 @@ export class CreateActivityComponent implements OnInit {
   removeMedia(index: number): void {
     this.selectedFiles.splice(index, 1);
     this.previews.splice(index, 1);
-    this.isVideoFile.splice(index, 1);
-    this.videoError = '';
   }
 
   /** @deprecated use removeMedia */
@@ -337,11 +280,6 @@ export class CreateActivityComponent implements OnInit {
 
   get visiblePreviews(): string[] {
     return this.previews.slice(0, 4);
-  }
-
-  /** True when at least one of the queued files is a video — used for upload UX messaging. */
-  get isUploadingVideo(): boolean {
-    return this.isVideoFile.some(v => v);
   }
 
   async onSubmit(): Promise<void> {
@@ -418,8 +356,6 @@ export class CreateActivityComponent implements OnInit {
       this.form.reset();
       this.selectedFiles = [];
       this.previews = [];
-      this.isVideoFile = [];
-      this.videoError = '';
       this.students = [];
       this.selectedStudentIds = [];
       this.audienceType = 'class';
