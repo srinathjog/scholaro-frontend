@@ -15,6 +15,12 @@ export const routes: Routes = [
 		title: 'Request a Demo — Scholaro',
 	},
 	{
+		// Public QR-code inquiry form — no auth required
+		path: 'inquiry/:code',
+		loadComponent: () => import('./features/public/inquiry-form/inquiry-form.component').then(m => m.InquiryFormComponent),
+		title: 'School Inquiry',
+	},
+	{
 		path: 'login',
 		component: LoginComponent,
 		canActivate: [loginGuard],
@@ -105,6 +111,11 @@ export const routes: Routes = [
 				path: 'calendar',
 				loadComponent: () => import('./features/admin/calendar/admin-calendar.component').then(m => m.AdminCalendarComponent),
 				title: 'Events Calendar',
+			},
+			{
+				path: 'inquiries',
+				loadComponent: () => import('./features/admin/inquiries/inquiries.component').then(m => m.InquiriesComponent),
+				title: 'Admissions Inquiries',
 			},
 			{
 				path: 'feed',

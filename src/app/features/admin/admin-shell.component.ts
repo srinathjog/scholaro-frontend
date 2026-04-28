@@ -170,6 +170,15 @@ import { filter } from 'rxjs/operators';
             Events Calendar
           </a>
 
+          <a routerLink="/admin/inquiries" routerLinkActive="bg-indigo-50 text-indigo-700"
+             (click)="onNavClick()"
+             class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-3-3v6M12 3a9 9 0 110 18A9 9 0 0112 3z" />
+            </svg>
+            Admissions
+          </a>
+
           <a routerLink="/admin/feed" routerLinkActive="bg-indigo-50 text-indigo-700"
              (click)="onNavClick()"
              class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
