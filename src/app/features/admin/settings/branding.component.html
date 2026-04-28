@@ -44,18 +44,25 @@
 
             <!-- Logo preview -->
             <div *ngIf="logoPreview" class="flex items-center gap-6">
-              <div class="w-28 h-28 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden bg-gray-50 shrink-0">
-                <img [src]="logoPreview" alt="School logo" class="max-w-full max-h-full object-contain" />
+              <div class="w-28 h-28 rounded-2xl border-2 border-gray-100 flex items-center justify-center overflow-hidden bg-gray-50 shrink-0 relative">
+                <img [src]="logoPreview" alt="School logo" class="max-w-full max-h-full object-contain" [class.opacity-40]="logoUploading" />
+                <div *ngIf="logoUploading" class="absolute inset-0 flex items-center justify-center">
+                  <svg class="w-6 h-6 text-indigo-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                  </svg>
+                </div>
               </div>
               <div class="space-y-2">
-                <p class="text-sm font-medium text-gray-700">Logo uploaded</p>
+                <p class="text-sm font-medium text-gray-700">{{ logoUploading ? 'Uploading…' : 'Logo uploaded' }}</p>
+                <p *ngIf="logoUploadError" class="text-xs text-red-600">{{ logoUploadError }}</p>
                 <div class="flex gap-2">
-                  <label class="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-semibold cursor-pointer hover:bg-indigo-100 transition-colors relative">
+                  <label class="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-semibold cursor-pointer hover:bg-indigo-100 transition-colors relative" [class.opacity-50]="logoUploading">
                     Change
-                    <input type="file" accept="image/*" (change)="onLogoFileSelected($event)" class="absolute inset-0 opacity-0 cursor-pointer" />
+                    <input type="file" accept="image/*" (change)="onLogoFileSelected($event)" class="absolute inset-0 opacity-0 cursor-pointer" [disabled]="logoUploading" />
                   </label>
-                  <button (click)="removeLogo()"
-                          class="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors">
+                  <button (click)="removeLogo()" [disabled]="logoUploading"
+                          class="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100 transition-colors disabled:opacity-50">
                     Remove
                   </button>
                 </div>

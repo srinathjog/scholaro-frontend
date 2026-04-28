@@ -49,11 +49,14 @@ export class BrandingComponent implements OnInit {
     });
   }
 
+  logoUploading = false;
+  logoUploadError = '';
+
   onLogoDrop(event: DragEvent): void {
     event.preventDefault();
     const file = event.dataTransfer?.files[0];
     if (file && file.type.startsWith('image/')) {
-      this.readFileAsDataUrl(file);
+      this.uploadLogoFile(file);
     }
   }
 
@@ -65,13 +68,37 @@ export class BrandingComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      this.readFileAsDataUrl(file);
+      this.uploadLogoFile(file);
     }
   }
 
   removeLogo(): void {
     this.logoUrl = null;
     this.logoPreview = null;
+  }
+
+  private uploadLogoFile(file: File): void {
+    this.logoUploading = true;
+    this.logoUploadError = '';
+    // Show local preview immediately while uploading
+    const reader = new FileReader();
+    reader.onload = () => { this.logoPreview = reader.result as string; this.cdr.detectChanges(); };
+    reader.readAsDataURL(file);
+
+    this.settingsService.uploadLogo(file).subscribe({
+      next: ({ url }) => {
+        this.logoUrl = url;
+        this.logoPreview = url;
+        this.logoUploading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.logoUploadError = err.error?.message || 'Logo upload failed. Please try again.';
+        this.logoUploading = false;
+        this.logoPreview = null;
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   save(): void {
@@ -103,16 +130,5 @@ export class BrandingComponent implements OnInit {
         this.cdr.detectChanges();
       },
     });
-  }
-
-  private readFileAsDataUrl(file: File): void {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      this.logoPreview = result;
-      this.logoUrl = result;
-      this.cdr.detectChanges();
-    };
-    reader.readAsDataURL(file);
   }
 }
