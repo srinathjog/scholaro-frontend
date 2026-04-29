@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../../environments/environment';
 
@@ -21,10 +21,16 @@ interface SchoolClass {
   name: string;
 }
 
+interface AcademicYear {
+  id: string;
+  year: string;
+  is_active: boolean;
+}
+
 @Component({
   selector: 'app-student-register',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './student-register.component.html',
 })
 export class StudentRegisterComponent implements OnInit {
@@ -45,6 +51,7 @@ export class StudentRegisterComponent implements OnInit {
   classes: SchoolClass[] = [];
   selectedClassId = '';
   loadingClasses = false;
+  activeAcademicYearId = '';
 
   // ── Parent / guardian ───────────────────────────────────────────────────
   parentName = '';
@@ -55,10 +62,12 @@ export class StudentRegisterComponent implements OnInit {
   // ── UI state ────────────────────────────────────────────────────────────
   saving = false;
   saveError = '';
+  noActiveYearWarning = false;
 
-  private readonly studentsApi = `${environment.apiUrl}/students`;
-  private readonly classesApi  = `${environment.apiUrl}/classes`;
-  private readonly leadsApi    = `${environment.apiUrl}/leads`;
+  private readonly studentsApi      = `${environment.apiUrl}/students`;
+  private readonly classesApi       = `${environment.apiUrl}/classes`;
+  private readonly leadsApi         = `${environment.apiUrl}/leads`;
+  private readonly academicYearsApi = `${environment.apiUrl}/academic-years`;
 
   constructor(
     private router: Router,
@@ -84,6 +93,26 @@ export class StudentRegisterComponent implements OnInit {
     }
 
     this.loadClasses();
+    this.loadActiveAcademicYear();
+  }
+
+  private loadActiveAcademicYear(): void {
+    this.http.get<AcademicYear[]>(this.academicYearsApi).subscribe({
+      next: (years) => {
+        const active = years.find(y => y.is_active);
+        if (active) {
+          this.activeAcademicYearId = active.id;
+          this.noActiveYearWarning = false;
+        } else {
+          this.noActiveYearWarning = true;
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.noActiveYearWarning = true;
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   private loadClasses(): void {
@@ -92,12 +121,15 @@ export class StudentRegisterComponent implements OnInit {
       next: (data) => {
         this.classes = data;
         this.loadingClasses = false;
-        // If the lead specified an expected class, try to match by name
+        // If the lead specified an expected class, try to match by name (case-insensitive, partial)
         if (this.prefill?.expectedClass) {
-          const match = data.find(c =>
-            c.name.toLowerCase().includes(this.prefill!.expectedClass.toLowerCase()) ||
-            this.prefill!.expectedClass.toLowerCase().includes(c.name.toLowerCase())
-          );
+          const needle = this.prefill.expectedClass.toLowerCase().trim();
+          const match = data.find(c => {
+            const hay = c.name.toLowerCase().trim();
+            return hay === needle ||
+                   hay.includes(needle) ||
+                   needle.includes(hay);
+          });
           if (match) this.selectedClassId = match.id;
         }
         this.cdr.detectChanges();
@@ -110,8 +142,8 @@ export class StudentRegisterComponent implements OnInit {
   }
 
   get formValid(): boolean {
+    // lastName is optional — inquiry form collects only a full name
     return this.firstName.trim().length > 0 &&
-           this.lastName.trim().length > 0 &&
            this.dob.length > 0 &&
            this.admissionDate.length > 0;
   }
@@ -165,16 +197,18 @@ export class StudentRegisterComponent implements OnInit {
   }
 
   private enrollInClass(studentId: string): void {
-    if (!this.selectedClassId) {
+    // Skip enrollment if no class selected or no active academic year available
+    if (!this.selectedClassId || !this.activeAcademicYearId) {
       this.markLeadEnrolledAndNavigate(studentId);
       return;
     }
 
     this.http
       .post(`${environment.apiUrl}/enrollments`, {
-        student_id: studentId,
-        class_id:   this.selectedClassId,
-        status:     'active',
+        student_id:       studentId,
+        class_id:         this.selectedClassId,
+        academic_year_id: this.activeAcademicYearId,
+        status:           'active',
       })
       .subscribe({
         next: () => this.markLeadEnrolledAndNavigate(studentId),

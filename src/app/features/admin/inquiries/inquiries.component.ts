@@ -52,6 +52,9 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
   newExpectedClass = '';
   newNotes = '';
 
+  // Tenant short code (for inquiry URL)
+  tenantShortCode = '';
+
   // Status update
   updatingId = '';
 
@@ -79,20 +82,30 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
 
   ngOnInit(): void {
     this.loadLeads();
+    this.loadTenantCode();
   }
 
-  get tenantCode(): string {
-    // tenantId UUID is used as the code in the public URL;
-    // the backend resolves both UUID and tenant_code
-    return this.tenantService.getTenantId() || '';
+  private loadTenantCode(): void {
+    const tenantId = this.tenantService.getTenantId();
+    if (!tenantId) return;
+    this.http.get<{ name: string; tenant_code: string | null; logo_url: string | null }>(
+      `${environment.apiUrl}/tenants/info/${tenantId}`
+    ).subscribe({
+      next: (info) => {
+        if (info.tenant_code) {
+          this.tenantShortCode = info.tenant_code;
+          this.cdr.detectChanges();
+        }
+      },
+    });
   }
 
   get qrUrl(): string {
-    // The public-facing URL a parent would open
     const base = environment.production
       ? 'https://scholaro.app'
       : window.location.origin;
-    return `${base}/inquiry/${this.tenantCode}`;
+    const code = this.tenantShortCode || this.tenantService.getTenantId() || '';
+    return `${base}/inquiry/${code}`;
   }
 
   get filteredLeads(): Lead[] {
