@@ -52,26 +52,14 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
   newExpectedClass = '';
   newNotes = '';
 
+  // Tenant short code (for inquiry URL)
+  tenantShortCode = '';
+
   // Status update
   updatingId = '';
 
   // Filter
   filterStatus = '';
-
-  // ── Convert to Student ──────────────────────────────────────────────────
-  convertLead: Lead | null = null;
-  convFirstName = '';
-  convLastName = '';
-  convDob = '';
-  convGender = 'male';
-  convAdmissionDate = new Date().toISOString().slice(0, 10);
-  convParentName = '';
-  convParentEmail = '';
-  convParentPhone = '';
-  convRelationship = 'parent';
-  converting = false;
-  convertError = '';
-  convertStudentId = '';
 
   readonly statusOptions = ['new', 'contacted', 'visited', 'enrolled', 'closed'];
   readonly classOptions = [
@@ -94,20 +82,30 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
 
   ngOnInit(): void {
     this.loadLeads();
+    this.loadTenantCode();
   }
 
-  get tenantCode(): string {
-    // tenantId UUID is used as the code in the public URL;
-    // the backend resolves both UUID and tenant_code
-    return this.tenantService.getTenantId() || '';
+  private loadTenantCode(): void {
+    const tenantId = this.tenantService.getTenantId();
+    if (!tenantId) return;
+    this.http.get<{ name: string; tenant_code: string | null; logo_url: string | null }>(
+      `${environment.apiUrl}/tenants/info/${tenantId}`
+    ).subscribe({
+      next: (info) => {
+        if (info.tenant_code) {
+          this.tenantShortCode = info.tenant_code;
+          this.cdr.detectChanges();
+        }
+      },
+    });
   }
 
   get qrUrl(): string {
-    // The public-facing URL a parent would open
     const base = environment.production
       ? 'https://scholaro.app'
       : window.location.origin;
-    return `${base}/inquiry/${this.tenantCode}`;
+    const code = this.tenantShortCode || this.tenantService.getTenantId() || '';
+    return `${base}/inquiry/${code}`;
   }
 
   get filteredLeads(): Lead[] {
@@ -209,107 +207,28 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; text: string }>
     return this.leads.filter(l => l.status === status).length;
   }
 
-  // ── Convert to Student ────────────────────────────────────────────────────
+  // ── Convert to Student ──────────────────────────────────────────────────
+  // The slide-over was replaced by full-page registration for better UX.
+  // State is passed via Angular Router so StudentRegisterComponent can pre-fill.
 
-  openConvert(lead: Lead): void {
-    const { first, last } = this.splitName(lead.child_name);
-    this.convertLead = lead;
-    this.convFirstName = first;
-    this.convLastName = last;
-    this.convDob = lead.child_dob || '';
-    this.convGender = 'male';
-    this.convAdmissionDate = new Date().toISOString().slice(0, 10);
-    this.convParentName = lead.parent_name;
-    this.convParentEmail = lead.parent_email || '';
-    this.convParentPhone = lead.parent_phone;
-    this.convRelationship = 'parent';
-    this.converting = false;
-    this.convertError = '';
-    this.convertStudentId = '';
-  }
+  registerAsStudent(lead: Lead): void {
+    const parts = lead.child_name.trim().split(/\s+/);
+    const lastName  = parts.length > 1 ? parts.pop()! : '';
+    const firstName = parts.join(' ');
 
-  closeConvert(): void {
-    this.convertLead = null;
-    this.convertError = '';
-    this.convertStudentId = '';
-  }
-
-  get convertFormValid(): boolean {
-    return this.convFirstName.trim().length > 0 &&
-           this.convLastName.trim().length > 0 &&
-           this.convDob.length > 0 &&
-           this.convAdmissionDate.length > 0;
-  }
-
-  submitConvert(): void {
-    if (!this.convertFormValid || this.converting || !this.convertLead) return;
-    this.converting = true;
-    this.convertError = '';
-
-    const studentPayload = {
-      first_name: this.convFirstName.trim(),
-      last_name: this.convLastName.trim(),
-      date_of_birth: this.convDob,
-      gender: this.convGender,
-      admission_date: this.convAdmissionDate,
-      status: 'active',
-    };
-
-    const studentsApi = `${environment.apiUrl}/students`;
-
-    this.http.post<{ id: string }>(studentsApi, studentPayload).subscribe({
-      next: (student) => {
-        this.convertStudentId = student.id;
-        // If parent email or name provided, create & link the parent account
-        if (this.convParentName.trim()) {
-          const parentPayload = {
-            name: this.convParentName.trim(),
-            email: this.convParentEmail.trim() || undefined,
-            phone: this.convParentPhone.trim() || undefined,
-            relationship: this.convRelationship,
-          };
-          this.http.post(`${studentsApi}/${student.id}/parents/create`, parentPayload).subscribe({
-            next: () => this.finalizeConvert(),
-            error: () => this.finalizeConvert(), // parent link failure is non-fatal
-          });
-        } else {
-          this.finalizeConvert();
-        }
-      },
-      error: (err) => {
-        this.convertError = err.error?.message || 'Failed to create student. Please check the form.';
-        this.converting = false;
-        this.cdr.detectChanges();
+    this.router.navigate(['/admin/students/register'], {
+      state: {
+        prefillFromLead: {
+          leadId:       lead.id,
+          firstName,
+          lastName,
+          dob:          lead.child_dob  || '',
+          expectedClass: lead.expected_class || '',
+          parentName:   lead.parent_name,
+          parentPhone:  lead.parent_phone,
+          parentEmail:  lead.parent_email || '',
+        },
       },
     });
-  }
-
-  private finalizeConvert(): void {
-    const lead = this.convertLead!;
-    // Mark lead as enrolled
-    this.http.patch(`${this.api}/${lead.id}`, { status: 'enrolled' }).subscribe({
-      next: () => {
-        lead.status = 'enrolled';
-        this.converting = false;
-        this.convertLead = null;
-        this.cdr.detectChanges();
-        // Navigate to the new student's detail page
-        this.router.navigate(['/admin/students', this.convertStudentId]);
-      },
-      error: () => {
-        // Even if patch fails, student was created — still navigate
-        this.converting = false;
-        this.convertLead = null;
-        this.cdr.detectChanges();
-        this.router.navigate(['/admin/students', this.convertStudentId]);
-      },
-    });
-  }
-
-  private splitName(full: string): { first: string; last: string } {
-    const parts = full.trim().split(/\s+/);
-    if (parts.length === 1) return { first: parts[0], last: '' };
-    const last = parts.pop()!;
-    return { first: parts.join(' '), last };
   }
 }

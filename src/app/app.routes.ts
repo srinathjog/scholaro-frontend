@@ -16,7 +16,13 @@ export const routes: Routes = [
 	},
 	{
 		// Public QR-code inquiry form — no auth required
+		// Supports both /inquiry/:code (QR) and /inquiry?code=LAUREL (links/flyers)
 		path: 'inquiry/:code',
+		loadComponent: () => import('./features/public/inquiry-form/inquiry-form.component').then(m => m.InquiryFormComponent),
+		title: 'School Inquiry',
+	},
+	{
+		path: 'inquiry',
 		loadComponent: () => import('./features/public/inquiry-form/inquiry-form.component').then(m => m.InquiryFormComponent),
 		title: 'School Inquiry',
 	},
@@ -55,6 +61,12 @@ export const routes: Routes = [
 				path: 'students',
 				loadComponent: () => import('./features/admin/students/students.component').then(m => m.StudentsComponent),
 				title: 'Students',
+			},
+			{
+				// Must come before students/:id so the router doesn't treat 'register' as an ID
+				path: 'students/register',
+				loadComponent: () => import('./features/admin/students/student-register.component').then(m => m.StudentRegisterComponent),
+				title: 'Register Student',
 			},
 			{
 				path: 'students/:id',
