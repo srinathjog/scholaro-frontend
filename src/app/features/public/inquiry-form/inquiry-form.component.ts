@@ -8,6 +8,10 @@ import { environment } from '../../../../environments/environment';
 interface SchoolInfo {
   name: string;
   logo_url: string | null;
+  /** Optional: hex accent colour extracted from logo or set in branding */
+  accent_color?: string | null;
+  /** Optional: short tagline / address */
+  tagline?: string | null;
 }
 
 interface InquiryPayload {
@@ -33,6 +37,7 @@ export class InquiryFormComponent implements OnInit {
   // School info loaded from public API
   schoolName = 'Our School';
   schoolLogo: string | null = null;
+  schoolTagline: string | null = null;
   loadingSchool = true;
   schoolNotFound = false;
 
@@ -45,6 +50,9 @@ export class InquiryFormComponent implements OnInit {
   expectedClass = '';
   heardAbout = '';
   notes = '';
+
+  // Field-level validation touched state
+  phoneTouched = false;
 
   submitting = false;
   submitted = false;
@@ -78,7 +86,10 @@ export class InquiryFormComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.tenantCode = (this.route.snapshot.paramMap.get('code') || '').toUpperCase();
+    // Support both /inquiry/:code (route param) and /inquiry?code=LAUREL (query param)
+    const routeParam = this.route.snapshot.paramMap.get('code') || '';
+    const queryParam = this.route.snapshot.queryParamMap.get('code') || '';
+    this.tenantCode = (routeParam || queryParam).toUpperCase();
     this.loadSchoolInfo();
   }
 
@@ -94,7 +105,10 @@ export class InquiryFormComponent implements OnInit {
         next: (info) => {
           this.schoolName = info.name;
           this.schoolLogo = info.logo_url;
+          this.schoolTagline = info.tagline ?? null;
           this.loadingSchool = false;
+          // Update browser tab title to school name
+          document.title = `Admissions Inquiry — ${info.name}`;
           this.cdr.detectChanges();
         },
         error: () => {
@@ -105,15 +119,27 @@ export class InquiryFormComponent implements OnInit {
       });
   }
 
+  /** True if phone is exactly 10 digits */
+  get phoneValid(): boolean {
+    return /^\d{10}$/.test(this.parentPhone.trim());
+  }
+
+  /** Show error only after the user has touched the field */
+  get showPhoneError(): boolean {
+    return this.phoneTouched && !this.phoneValid;
+  }
+
   get formValid(): boolean {
     return (
       this.parentName.trim().length > 0 &&
-      this.parentPhone.trim().length >= 10 &&
+      this.phoneValid &&
       this.childName.trim().length > 0
     );
   }
 
   submit(): void {
+    // Mark phone as touched so error shows on submit attempt
+    this.phoneTouched = true;
     if (!this.formValid || this.submitting) return;
     this.submitting = true;
     this.submitError = '';
@@ -160,6 +186,7 @@ export class InquiryFormComponent implements OnInit {
     this.heardAbout = '';
     this.notes = '';
     this.submitError = '';
+    this.phoneTouched = false;
     this.cdr.detectChanges();
   }
 }
