@@ -275,7 +275,7 @@ export class CreateActivityComponent implements OnInit {
         const { default: imageCompression } = await import('browser-image-compression');
         const compressionOptions = {
           maxSizeMB: 0.3,
-          maxWidthOrHeight: 1280,
+          maxWidthOrHeight: 1080,
           useWebWorker: true,
           initialQuality: 0.7,
         };
