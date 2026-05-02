@@ -21,6 +21,11 @@ interface SchoolClass {
   name: string;
 }
 
+interface Section {
+  id: string;
+  name: string;
+}
+
 interface AcademicYear {
   id: string;
   year: string;
@@ -52,6 +57,13 @@ export class StudentRegisterComponent implements OnInit {
   selectedClassId = '';
   loadingClasses = false;
   activeAcademicYearId = '';
+  /** True when the lead's expectedClass string has no matching class in DB */
+  expectedClassMissing = false;
+
+  // ── Section enrollment ──────────────────────────────────────────────────
+  sections: Section[] = [];
+  selectedSectionId = '';
+  loadingSections = false;
 
   // ── Parent / guardian ───────────────────────────────────────────────────
   parentName = '';
@@ -66,6 +78,7 @@ export class StudentRegisterComponent implements OnInit {
 
   private readonly studentsApi      = `${environment.apiUrl}/students`;
   private readonly classesApi       = `${environment.apiUrl}/classes`;
+  private readonly sectionsApi      = `${environment.apiUrl}/sections`;
   private readonly leadsApi         = `${environment.apiUrl}/leads`;
   private readonly academicYearsApi = `${environment.apiUrl}/academic-years`;
 
@@ -121,21 +134,56 @@ export class StudentRegisterComponent implements OnInit {
       next: (data) => {
         this.classes = data;
         this.loadingClasses = false;
-        // If the lead specified an expected class, try to match by name (case-insensitive, partial)
+        // If the lead specified an expected class, match by normalized key (strip spaces + lowercase)
         if (this.prefill?.expectedClass) {
-          const needle = this.prefill.expectedClass.toLowerCase().trim();
-          const match = data.find(c => {
-            const hay = c.name.toLowerCase().trim();
-            return hay === needle ||
-                   hay.includes(needle) ||
-                   needle.includes(hay);
-          });
-          if (match) this.selectedClassId = match.id;
+          const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '');
+          const needle = normalize(this.prefill.expectedClass.trim());
+          const match = data.find(c => normalize(c.name) === needle);
+          if (match) {
+            this.selectClass(match.id, true /* autoSelectSingleSection */);
+          } else {
+            this.expectedClassMissing = true;
+          }
         }
         this.cdr.detectChanges();
       },
       error: () => {
         this.loadingClasses = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  /**
+   * Select a class and load its sections.
+   * @param classId UUID of the class to select
+   * @param autoSelectSingleSection When true (used by lead pre-fill), automatically
+   *   select the section if the class has exactly one.
+   */
+  selectClass(classId: string, autoSelectSingleSection = false): void {
+    if (this.selectedClassId === classId && !autoSelectSingleSection) {
+      this.selectedClassId = '';
+      this.sections = [];
+      this.selectedSectionId = '';
+      return;
+    }
+    this.selectedClassId = classId;
+    this.selectedSectionId = '';
+    this.sections = [];
+    this.loadingSections = true;
+    this.http.get<Section[]>(`${this.sectionsApi}?classId=${classId}`).subscribe({
+      next: (data) => {
+        this.sections = data;
+        this.loadingSections = false;
+        // Auto-select the only section when pre-filling from a lead
+        if (autoSelectSingleSection && data.length === 1) {
+          this.selectedSectionId = data[0].id;
+        }
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.sections = [];
+        this.loadingSections = false;
         this.cdr.detectChanges();
       },
     });
@@ -153,7 +201,7 @@ export class StudentRegisterComponent implements OnInit {
     this.saving = true;
     this.saveError = '';
 
-    const studentPayload = {
+    const studentPayload: Record<string, string> = {
       first_name:     this.firstName.trim(),
       last_name:      this.lastName.trim(),
       date_of_birth:  this.dob,
@@ -161,6 +209,15 @@ export class StudentRegisterComponent implements OnInit {
       admission_date: this.admissionDate,
       status:         this.status,
     };
+
+    // Include enrollment fields so the backend can atomically create Student + Enrollment
+    if (this.selectedClassId && this.activeAcademicYearId) {
+      studentPayload['class_id'] = this.selectedClassId;
+      studentPayload['academic_year_id'] = this.activeAcademicYearId;
+      if (this.selectedSectionId) {
+        studentPayload['section_id'] = this.selectedSectionId;
+      }
+    }
 
     this.http.post<{ id: string }>(this.studentsApi, studentPayload).subscribe({
       next: (student) => {
@@ -197,23 +254,9 @@ export class StudentRegisterComponent implements OnInit {
   }
 
   private enrollInClass(studentId: string): void {
-    // Skip enrollment if no class selected or no active academic year available
-    if (!this.selectedClassId || !this.activeAcademicYearId) {
-      this.markLeadEnrolledAndNavigate(studentId);
-      return;
-    }
-
-    this.http
-      .post(`${environment.apiUrl}/enrollments`, {
-        student_id:       studentId,
-        class_id:         this.selectedClassId,
-        academic_year_id: this.activeAcademicYearId,
-        status:           'active',
-      })
-      .subscribe({
-        next: () => this.markLeadEnrolledAndNavigate(studentId),
-        error: () => this.markLeadEnrolledAndNavigate(studentId), // non-fatal
-      });
+    // Enrollment is now created atomically in the backend during POST /students.
+    // This method now only handles the fallback case (no class selected).
+    this.markLeadEnrolledAndNavigate(studentId);
   }
 
   private markLeadEnrolledAndNavigate(studentId: string): void {

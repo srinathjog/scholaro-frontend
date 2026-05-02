@@ -134,6 +134,11 @@ export const routes: Routes = [
 				loadComponent: () => import('./features/admin/global-feed/global-feed.component').then(m => m.GlobalFeedComponent),
 				title: 'Global Activity Feed',
 			},
+			{
+				path: 'documents',
+				loadComponent: () => import('./features/admin/documents/admin-documents.component').then(m => m.AdminDocumentsComponent),
+				title: 'School Documents',
+			},
 		],
 	},
 	{

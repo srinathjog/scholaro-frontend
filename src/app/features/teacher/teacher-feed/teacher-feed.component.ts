@@ -110,4 +110,57 @@ export class TeacherFeedComponent implements OnInit {
 
   showToast = false;
   toastMessage = '';
+
+  // ── Lightbox ───────────────────────────────────────────────────────────
+  /** All image URLs for the activity currently open in the lightbox. */
+  lightboxImages: string[] = [];
+  /** Index of the currently displayed image. */
+  lightboxIndex = 0;
+  /** Controls fade opacity during prev/next navigation. */
+  lightboxImageVisible = true;
+
+  get selectedImageUrl(): string | null {
+    return this.lightboxImages.length > 0 ? this.lightboxImages[this.lightboxIndex] : null;
+  }
+
+  openLightboxForActivity(activity: Activity, clickedUrl: string): void {
+    const images = (activity.media || [])
+      .filter((m: any) => m.media_type !== 'video')
+      .map((m: any) => m.media_url as string);
+    const idx = images.indexOf(clickedUrl);
+    this.lightboxImages = images;
+    this.lightboxIndex = idx >= 0 ? idx : 0;
+    this.lightboxImageVisible = true;
+    this.cdr.detectChanges();
+  }
+
+  closeLightbox(): void {
+    this.lightboxImages = [];
+    this.lightboxIndex = 0;
+    this.cdr.detectChanges();
+  }
+
+  lightboxPrev(): void {
+    if (this.lightboxIndex > 0 && this.lightboxImageVisible) {
+      this.lightboxImageVisible = false;
+      this.cdr.detectChanges();
+      setTimeout(() => {
+        this.lightboxIndex--;
+        this.lightboxImageVisible = true;
+        this.cdr.detectChanges();
+      }, 160);
+    }
+  }
+
+  lightboxNext(): void {
+    if (this.lightboxIndex < this.lightboxImages.length - 1 && this.lightboxImageVisible) {
+      this.lightboxImageVisible = false;
+      this.cdr.detectChanges();
+      setTimeout(() => {
+        this.lightboxIndex++;
+        this.lightboxImageVisible = true;
+        this.cdr.detectChanges();
+      }, 160);
+    }
+  }
 }

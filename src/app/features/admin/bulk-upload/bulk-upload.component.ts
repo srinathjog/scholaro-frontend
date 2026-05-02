@@ -47,7 +47,7 @@ export class BulkUploadComponent {
   }
 
   upload(): void {
-    if (!this.selectedFile || !this.tenantId) return;
+    if (!this.selectedFile || !this.tenantId || this.uploading) return;
     this.uploading = true;
     this.error = '';
     this.result = null;

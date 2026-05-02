@@ -188,38 +188,47 @@
         <!-- 1 photo: full-width hero -->
         <div *ngIf="activity.media.length === 1">
           <img [src]="activity.media[0].media_url" alt="Activity photo"
-               class="w-full h-72 object-cover" />
+               class="w-full h-72 object-cover cursor-pointer"
+               (click)="openLightboxForActivity(activity, activity.media[0].media_url)" />
         </div>
 
         <!-- 2 photos: side by side -->
         <div *ngIf="activity.media.length === 2" class="grid grid-cols-2 gap-0.5">
           <img *ngFor="let m of activity.media" [src]="m.media_url" alt="Activity photo"
-               class="w-full h-52 object-cover" />
+               class="w-full h-52 object-cover cursor-pointer"
+               (click)="openLightboxForActivity(activity, m.media_url)" />
         </div>
 
         <!-- 3 photos: 1 large left + 2 stacked right -->
         <div *ngIf="activity.media.length === 3" class="grid grid-cols-2 grid-rows-2 gap-0.5 h-64">
           <img [src]="activity.media[0].media_url" alt="Activity photo"
-               class="w-full h-full object-cover row-span-2" />
+               class="w-full h-full object-cover row-span-2 cursor-pointer"
+               (click)="openLightboxForActivity(activity, activity.media[0].media_url)" />
           <img [src]="activity.media[1].media_url" alt="Activity photo"
-               class="w-full h-full object-cover" />
+               class="w-full h-full object-cover cursor-pointer"
+               (click)="openLightboxForActivity(activity, activity.media[1].media_url)" />
           <img [src]="activity.media[2].media_url" alt="Activity photo"
-               class="w-full h-full object-cover" />
+               class="w-full h-full object-cover cursor-pointer"
+               (click)="openLightboxForActivity(activity, activity.media[2].media_url)" />
         </div>
 
         <!-- 4 photos: 2x2 grid -->
         <div *ngIf="activity.media.length === 4" class="grid grid-cols-2 gap-0.5">
           <img *ngFor="let m of activity.media" [src]="m.media_url" alt="Activity photo"
-               class="w-full h-40 object-cover" />
+               class="w-full h-40 object-cover cursor-pointer"
+               (click)="openLightboxForActivity(activity, m.media_url)" />
         </div>
 
         <!-- 5+ photos: first 3 shown + "+N" overlay on 4th -->
         <div *ngIf="activity.media.length > 4" class="grid grid-cols-2 grid-rows-2 gap-0.5 h-72">
           <img [src]="activity.media[0].media_url" alt="Activity photo"
-               class="w-full h-full object-cover row-span-2" />
+               class="w-full h-full object-cover row-span-2 cursor-pointer"
+               (click)="openLightboxForActivity(activity, activity.media[0].media_url)" />
           <img [src]="activity.media[1].media_url" alt="Activity photo"
-               class="w-full h-full object-cover" />
-          <div class="relative">
+               class="w-full h-full object-cover cursor-pointer"
+               (click)="openLightboxForActivity(activity, activity.media[1].media_url)" />
+          <div class="relative cursor-pointer"
+               (click)="openLightboxForActivity(activity, activity.media[2].media_url)">
             <img [src]="activity.media[2].media_url" alt="Activity photo"
                  class="w-full h-full object-cover" />
             <div class="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -259,6 +268,67 @@
           Shared
         </span>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── LIGHTBOX OVERLAY ─── -->
+<div *ngIf="selectedImageUrl"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm"
+     (click)="closeLightbox()">
+
+  <!-- Left nav arrow -->
+  <button *ngIf="lightboxIndex > 0"
+          (click)="$event.stopPropagation(); lightboxPrev()"
+          class="absolute left-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center
+                 w-11 h-11 rounded-full bg-white/25 hover:bg-white/45 text-white
+                 transition active:scale-90"
+          aria-label="Previous photo">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+    </svg>
+  </button>
+
+  <!-- Right nav arrow -->
+  <button *ngIf="lightboxIndex < lightboxImages.length - 1"
+          (click)="$event.stopPropagation(); lightboxNext()"
+          class="absolute right-3 top-1/2 -translate-y-1/2 z-10 flex items-center justify-center
+                 w-11 h-11 rounded-full bg-white/25 hover:bg-white/45 text-white
+                 transition active:scale-90"
+          aria-label="Next photo">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/>
+    </svg>
+  </button>
+
+  <!-- Image container -->
+  <div class="relative flex flex-col items-center mx-14"
+       (click)="$event.stopPropagation()">
+
+    <!-- Close button -->
+    <button (click)="closeLightbox()"
+            class="absolute -top-3 -right-3 z-20 flex items-center justify-center w-8 h-8
+                   rounded-full bg-white shadow-lg text-gray-800 hover:bg-gray-200
+                   transition active:scale-90"
+            aria-label="Close">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+
+    <!-- Full-size image -->
+    <img [src]="selectedImageUrl"
+         alt="Full size photo"
+         class="max-h-[75vh] max-w-full rounded-xl shadow-2xl object-contain
+                transition-opacity duration-[160ms] ease-in-out"
+         [class.opacity-0]="!lightboxImageVisible" />
+
+    <!-- Counter -->
+    <div *ngIf="lightboxImages.length > 1"
+         class="mt-3 px-1">
+      <span class="text-white/80 text-xs font-semibold">
+        {{ lightboxIndex + 1 }} / {{ lightboxImages.length }}
+      </span>
     </div>
   </div>
 </div>

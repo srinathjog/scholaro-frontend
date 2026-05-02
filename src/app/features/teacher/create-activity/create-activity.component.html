@@ -379,30 +379,16 @@
           </label>
         </div>
 
-        <!-- Compression progress bar -->
-        <div *ngIf="compressing" class="mb-4">
+        <!-- Combined optimise + upload progress bar -->
+        <div *ngIf="uploading" class="mb-4">
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-xs font-semibold text-indigo-600">
-              Processing photo {{ compressionCurrent }} of {{ compressionTotal }}…
+              Optimizing &amp; Uploading photo {{ uploadCurrent }} of {{ uploadTotal }}…
             </span>
-            <span class="text-xs font-bold text-indigo-600">{{ compressionProgress }}%</span>
+            <span class="text-xs font-bold text-indigo-600">{{ uploadProgress }}%</span>
           </div>
           <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
             <div class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300"
-                 [style.width.%]="compressionProgress"></div>
-          </div>
-        </div>
-
-        <!-- Upload progress bar -->
-        <div *ngIf="uploading" class="mb-4">
-          <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-semibold text-emerald-600">
-              Uploading photo {{ uploadCurrent }} of {{ uploadTotal }}…
-            </span>
-            <span class="text-xs font-bold text-emerald-600">{{ uploadProgress }}%</span>
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-            <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-2 rounded-full transition-all duration-300"
                  [style.width.%]="uploadProgress"></div>
           </div>
         </div>
@@ -413,7 +399,7 @@
 
           <!-- Post button -->
           <button type="submit"
-                  [disabled]="form.invalid || submitting || compressing || attendanceMissing"
+                  [disabled]="form.invalid || submitting || attendanceMissing"
                   class="px-8 py-3 rounded-full text-white font-bold text-sm tracking-wide transition-all duration-200
                          bg-gradient-to-r from-indigo-600 to-purple-600
                          hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg hover:shadow-indigo-200
@@ -429,7 +415,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
             </svg>
-            {{ compressing ? ('Processing photo ' + compressionCurrent + ' of ' + compressionTotal + '…') : (uploading ? ('Uploading photo ' + uploadCurrent + ' of ' + uploadTotal + '… ' + uploadProgress + '%') : (submitting ? (isEditMode ? 'Updating…' : 'Posting…') : (isEditMode ? 'Update Post' : 'Post to Parents'))) }}
+            {{ uploading ? ('Optimizing & Uploading photo ' + uploadCurrent + ' of ' + uploadTotal + '…') : (submitting ? (isEditMode ? 'Updating…' : 'Posting…') : (isEditMode ? 'Update Post' : 'Post to Parents')) }}
           </button>
         </div>
       </div>
@@ -448,7 +434,7 @@
 
       <!-- Title + subtitle -->
       <div class="text-center">
-        <p class="font-bold text-gray-900 text-base">Uploading Photos</p>
+        <p class="font-bold text-gray-900 text-base">Optimizing &amp; Uploading</p>
         <p class="text-sm text-gray-500 mt-1">
           {{ 'Photo ' + uploadCurrent + ' of ' + uploadTotal + (uploadCurrent < uploadTotal ? ' — almost there…' : ' — finishing up…') }}
         </p>
@@ -458,7 +444,7 @@
       <div class="w-full">
         <div class="flex justify-between mb-1.5">
           <span class="text-xs text-gray-500">
-            {{ uploadProgress < 100 ? 'Uploading…' : 'Finishing up…' }}
+            {{ uploadProgress < 100 ? 'Optimizing &amp; uploading…' : 'Finishing up…' }}
           </span>
           <span class="text-xs font-bold text-indigo-600">
             {{ uploadProgress }}%

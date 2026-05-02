@@ -1,7 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AcademicService, SchoolClass, Section, SectionCount } from '../../../data/services/academic.service';
+import { AcademicService, SchoolClass, Section, SectionCount, ClassCount } from '../../../data/services/academic.service';
 import { StudentService } from '../../../data/services/student.service';
 import { forkJoin } from 'rxjs';
 import * as XLSX from 'xlsx';
@@ -9,7 +9,8 @@ import * as XLSX from 'xlsx';
 interface ClassCard {
   cls: SchoolClass;
   sections: Section[];
-  studentCounts: Map<string, number>;
+  studentCounts: Map<string, number>;  // section_id → count (for per-section display)
+  totalStudents: number;                // class-level total (includes no-section enrollments)
   expanded: boolean;
   addingSection: boolean;
   newSectionName: string;
@@ -31,6 +32,17 @@ export class ClassListComponent implements OnInit {
   deleteTarget: ClassCard | null = null;
   deleting = false;
 
+  // ── Add Class ──────────────────────────────────────────────────────────
+  showAddClass = false;
+  newClassName = '';
+  savingClass = false;
+  addClassError = '';
+
+  /** Title-case preview shown live as the user types, matching backend normalization. */
+  get previewClassName(): string {
+    return this.newClassName.trim().replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  }
+
   private cdr = inject(ChangeDetectorRef);
 
   constructor(
@@ -46,16 +58,21 @@ export class ClassListComponent implements OnInit {
     this.loading = true;
     forkJoin({
       classes: this.academicService.getClasses(),
-      counts: this.academicService.getSectionStudentCounts(),
+      sectionCounts: this.academicService.getSectionStudentCounts(),
+      classCounts: this.academicService.getClassStudentCounts(),
     }).subscribe({
-      next: ({ classes, counts }) => {
-        const countMap = new Map<string, number>();
-        counts.forEach(c => countMap.set(c.section_id, c.count));
+      next: ({ classes, sectionCounts, classCounts }) => {
+        const sectionCountMap = new Map<string, number>();
+        sectionCounts.forEach(c => sectionCountMap.set(c.section_id, c.count));
+
+        const classCountMap = new Map<string, number>();
+        classCounts.forEach(c => classCountMap.set(c.class_id, c.count));
 
         this.cards = classes.map(cls => ({
           cls,
           sections: [],
-          studentCounts: countMap,
+          studentCounts: sectionCountMap,
+          totalStudents: classCountMap.get(cls.id) ?? 0,
           expanded: true,
           addingSection: false,
           newSectionName: '',
@@ -87,7 +104,8 @@ export class ClassListComponent implements OnInit {
   }
 
   getTotalStudents(card: ClassCard): number {
-    return card.sections.reduce((sum, s) => sum + (card.studentCounts.get(s.id) || 0), 0);
+    // Use class-level count which includes students with no section
+    return card.totalStudents;
   }
 
   toggleAddSection(card: ClassCard): void {
@@ -136,6 +154,35 @@ export class ClassListComponent implements OnInit {
         this.error = err?.error?.message || 'Failed to delete class.';
         this.deleteTarget = null;
         this.deleting = false;
+        this.cdr.detectChanges();
+      },
+    });
+  }
+
+  addClass(): void {
+    const name = this.newClassName.trim();
+    if (!name || this.savingClass) return;
+    this.savingClass = true;
+    this.addClassError = '';
+    this.academicService.createClass({ name }).subscribe({
+      next: (cls) => {
+        this.cards.push({
+          cls,
+          sections: [],
+          studentCounts: new Map(),
+          totalStudents: 0,
+          expanded: true,
+          addingSection: false,
+          newSectionName: '',
+        });
+        this.newClassName = '';
+        this.showAddClass = false;
+        this.savingClass = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        this.addClassError = err?.error?.message || 'Failed to create class. It may already exist.';
+        this.savingClass = false;
         this.cdr.detectChanges();
       },
     });
