@@ -440,10 +440,27 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
           this.setupScrollObserver();
         },
         error: () => {
-          this.errorMessage = 'Could not load timeline. Pull down to retry.';
-          this.loading = false;
-          this.refreshing = false;
-          this.cdr.detectChanges();
+          // Auto-retry once after 2 s before giving up and showing the pull-to-refresh hint.
+          setTimeout(() => {
+            this.parentService
+              .getTimeline(this.selectedEnrollmentId, this.selectedClassId, undefined, this.selectedChild?.id)
+              .subscribe({
+                next: (result) => {
+                  this.timeline = result.items;
+                  this.hasNextPage = result.hasNextPage;
+                  this.loading = false;
+                  this.refreshing = false;
+                  this.cdr.detectChanges();
+                  this.setupScrollObserver();
+                },
+                error: () => {
+                  this.errorMessage = 'Could not load timeline. Pull down to retry.';
+                  this.loading = false;
+                  this.refreshing = false;
+                  this.cdr.detectChanges();
+                },
+              });
+          }, 2000);
         },
       });
   }

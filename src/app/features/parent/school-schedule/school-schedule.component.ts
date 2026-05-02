@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ParentService, ParentChild } from '../../../data/services/parent.service';
 import { AttendanceService, AttendanceRecord } from '../../../data/services/attendance.service';
+import { SchoolDocumentsService, SchoolDocument } from '../../../data/services/school-documents.service';
 import { environment } from '../../../../environments/environment';
 
 // ── Local DTOs ────────────────────────────────────────────────────────────────
@@ -19,6 +20,15 @@ export interface SchoolEvent {
   is_school_closed: boolean;
 }
 
+export interface CalendarCell {
+  dateStr: string | null;      // YYYY-MM-DD, null for padding cells
+  day: number | null;
+  isToday: boolean;
+  isFuture: boolean;
+  events: SchoolEvent[];
+  attendanceDot: 'present' | 'absent' | 'late' | 'leave' | null;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 @Component({
@@ -31,7 +41,7 @@ export interface SchoolEvent {
 export class SchoolScheduleComponent implements OnInit {
 
   // ── Tab state ──────────────────────────────────────────────────────────────
-  activeTab: 'events' | 'attendance' = 'events';
+  activeTab: 'events' | 'attendance' | 'planner' = 'events';
 
   // ── Child selector ─────────────────────────────────────────────────────────
   children: ParentChild[] = [];
@@ -42,15 +52,25 @@ export class SchoolScheduleComponent implements OnInit {
   events: SchoolEvent[] = [];
   loadingEvents = false;
   eventsError = '';
-
+  // ── Calendar grid state ───────────────────────────────────────────────
+  calendarView: 'grid' | 'list' = 'grid';
+  calendarYear = new Date().getFullYear();
+  calendarMonth = new Date().getMonth(); // 0-indexed
+  selectedCalendarDate: string | null = null;
   // ── Attendance tab ─────────────────────────────────────────────────────────
   attendanceRecords: AttendanceRecord[] = [];
   loadingAttendance = false;
   attendanceError = '';
 
+  // ── Planner tab ────────────────────────────────────────────────────────────
+  documents: SchoolDocument[] = [];
+  loadingDocuments = false;
+  documentsError = '';
+
   constructor(
     private readonly parentService: ParentService,
     private readonly attendanceService: AttendanceService,
+    private readonly documentsService: SchoolDocumentsService,
     private readonly http: HttpClient,
     private readonly cdr: ChangeDetectorRef,
   ) {}
@@ -77,7 +97,7 @@ export class SchoolScheduleComponent implements OnInit {
 
   // ── Tab switching ──────────────────────────────────────────────────────────
 
-  switchTab(tabName: 'events' | 'attendance'): void {
+  switchTab(tabName: 'events' | 'attendance' | 'planner'): void {
     if (this.activeTab === tabName) return;
     this.activeTab = tabName;
 
@@ -92,6 +112,10 @@ export class SchoolScheduleComponent implements OnInit {
       }
     }
 
+    if (tabName === 'planner' && this.documents.length === 0 && !this.loadingDocuments) {
+      this.loadDocuments();
+    }
+
     this.cdr.markForCheck();
   }
 
@@ -103,10 +127,9 @@ export class SchoolScheduleComponent implements OnInit {
     this.attendanceRecords = [];
     this.attendanceError = '';
 
-    if (this.activeTab === 'attendance') {
-      const enrollmentId = this.activeEnrollmentId;
-      if (enrollmentId) this.loadAttendance(enrollmentId);
-    }
+    // Always eager-load attendance so calendar grid dots are populated
+    const enrollmentId = this.selectedChild?.enrollments?.[0]?.id;
+    if (enrollmentId) this.loadAttendance(enrollmentId);
 
     // Events are school-wide — no need to re-fetch on child change
     if (this.events.length === 0 && !this.loadingEvents) {
@@ -157,6 +180,96 @@ export class SchoolScheduleComponent implements OnInit {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  // ── Calendar navigation ──────────────────────────────────────────────
+
+  prevMonth(): void {
+    if (this.calendarMonth === 0) { this.calendarMonth = 11; this.calendarYear--; }
+    else this.calendarMonth--;
+    this.selectedCalendarDate = null;
+    this.cdr.markForCheck();
+  }
+
+  nextMonth(): void {
+    if (this.calendarMonth === 11) { this.calendarMonth = 0; this.calendarYear++; }
+    else this.calendarMonth++;
+    this.selectedCalendarDate = null;
+    this.cdr.markForCheck();
+  }
+
+  selectCalendarDate(dateStr: string | null): void {
+    if (!dateStr) return;
+    this.selectedCalendarDate = this.selectedCalendarDate === dateStr ? null : dateStr;
+    this.cdr.markForCheck();
+  }
+
+  get calendarMonthLabel(): string {
+    return new Date(this.calendarYear, this.calendarMonth, 1).toLocaleDateString('en-IN', {
+      month: 'long', year: 'numeric',
+    });
+  }
+
+  /**
+   * Builds the flat array of 42 cells (6 rows × 7 cols) for the CSS grid.
+   * Leading/trailing cells have dateStr = null.
+   */
+  get calendarCells(): CalendarCell[] {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const firstWeekday = new Date(this.calendarYear, this.calendarMonth, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(this.calendarYear, this.calendarMonth + 1, 0).getDate();
+
+    // Fast lookup maps built once per getter call
+    const eventMap = new Map<string, SchoolEvent[]>();
+    for (const ev of this.events) {
+      const arr = eventMap.get(ev.event_date) ?? [];
+      arr.push(ev);
+      eventMap.set(ev.event_date, arr);
+    }
+    const attMap = new Map<string, 'present' | 'absent' | 'late' | 'leave'>();
+    for (const rec of this.attendanceRecords) {
+      attMap.set(rec.date, rec.status as 'present' | 'absent' | 'late' | 'leave');
+    }
+
+    const cells: CalendarCell[] = [];
+
+    // Leading padding
+    for (let i = 0; i < firstWeekday; i++) {
+      cells.push({ dateStr: null, day: null, isToday: false, isFuture: false, events: [], attendanceDot: null });
+    }
+
+    // Day cells
+    for (let d = 1; d <= daysInMonth; d++) {
+      const mm = String(this.calendarMonth + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      const dateStr = `${this.calendarYear}-${mm}-${dd}`;
+      cells.push({
+        dateStr,
+        day: d,
+        isToday: dateStr === todayStr,
+        isFuture: dateStr > todayStr,
+        events: eventMap.get(dateStr) ?? [],
+        attendanceDot: attMap.get(dateStr) ?? null,
+      });
+    }
+
+    // Trailing padding to fill last row
+    while (cells.length % 7 !== 0) {
+      cells.push({ dateStr: null, day: null, isToday: false, isFuture: false, events: [], attendanceDot: null });
+    }
+
+    return cells;
+  }
+
+  get selectedDateEvents(): SchoolEvent[] {
+    if (!this.selectedCalendarDate) return [];
+    return this.events.filter(e => e.event_date === this.selectedCalendarDate);
+  }
+
+  get selectedDateAttendance(): 'present' | 'absent' | 'late' | 'leave' | null {
+    if (!this.selectedCalendarDate) return null;
+    const rec = this.attendanceRecords.find(r => r.date === this.selectedCalendarDate);
+    return rec ? rec.status as 'present' | 'absent' | 'late' | 'leave' : null;
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -234,5 +347,22 @@ export class SchoolScheduleComponent implements OnInit {
   get attendancePercentage(): number {
     const { present, total } = this.attendanceSummary;
     return total === 0 ? 0 : Math.round((present / total) * 100);
+  }
+
+  private loadDocuments(): void {
+    this.loadingDocuments = true;
+    this.documentsError = '';
+    this.documentsService.getDocuments().subscribe({
+      next: (docs) => {
+        this.documents = docs;
+        this.loadingDocuments = false;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.documentsError = 'Could not load documents. Please try again.';
+        this.loadingDocuments = false;
+        this.cdr.markForCheck();
+      },
+    });
   }
 }

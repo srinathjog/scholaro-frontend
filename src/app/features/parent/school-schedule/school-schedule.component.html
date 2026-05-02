@@ -40,6 +40,13 @@
                   : 'text-slate-500 hover:text-slate-700'">
           <span>✅</span> Attendance
         </button>
+        <button (click)="switchTab('planner')"
+                class="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all"
+                [class]="activeTab === 'planner'
+                  ? 'bg-white text-violet-700 shadow-sm shadow-violet-100'
+                  : 'text-slate-500 hover:text-slate-700'">
+          <span>📋</span> Planner
+        </button>
       </div>
 
     </div>
@@ -66,61 +73,219 @@
         <p class="text-sm font-semibold text-red-600">{{ eventsError }}</p>
       </div>
 
-      <!-- Empty -->
-      <div *ngIf="!loadingEvents && !eventsError && events.length === 0"
-           class="flex flex-col items-center justify-center py-20 text-center">
-        <div class="w-16 h-16 rounded-full bg-violet-50 flex items-center justify-center mb-4 text-3xl">📅</div>
-        <p class="font-bold text-slate-700 text-base">No events yet</p>
-        <p class="text-slate-400 text-sm mt-1">Check back soon for holidays and school events.</p>
-      </div>
+      <div *ngIf="!loadingEvents && !eventsError">
 
-      <!-- Month-grouped event list -->
-      <div *ngIf="!loadingEvents && !eventsError && events.length > 0" class="space-y-6">
-        <div *ngFor="let group of eventsGroupedByMonth">
+        <!-- ── Grid / List toggle ── -->
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">
+            {{ calendarMonthLabel }}
+          </span>
+          <div class="flex p-0.5 bg-slate-100 rounded-lg gap-0.5">
+            <button (click)="calendarView = 'grid'; selectedCalendarDate = null"
+                    class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
+                    [class]="calendarView === 'grid'
+                      ? 'bg-white text-violet-700 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'">
+              📅 Grid
+            </button>
+            <button (click)="calendarView = 'list'; selectedCalendarDate = null"
+                    class="px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
+                    [class]="calendarView === 'list'
+                      ? 'bg-white text-violet-700 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'">
+              ☰ List
+            </button>
+          </div>
+        </div>
 
-          <!-- Month header -->
-          <div class="flex items-center gap-3 mb-3">
-            <span class="text-xs font-extrabold text-violet-600 uppercase tracking-widest">{{ group.month }}</span>
-            <div class="flex-1 h-px bg-violet-100"></div>
+        <!-- ════════ CALENDAR GRID VIEW ════════ -->
+        <div *ngIf="calendarView === 'grid'" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+
+          <!-- Month navigation header -->
+          <div class="flex items-center justify-between px-4 py-3 bg-violet-600 text-white">
+            <button (click)="prevMonth()"
+                    class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+              </svg>
+            </button>
+            <span class="text-sm font-extrabold tracking-wide">{{ calendarMonthLabel }}</span>
+            <button (click)="nextMonth()"
+                    class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 active:scale-90 transition-all">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
           </div>
 
-          <!-- Events in this month -->
-          <ul class="space-y-2.5">
-            <li *ngFor="let event of group.events"
-                class="flex gap-3 p-3.5 bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+          <!-- Weekday header row -->
+          <div class="grid grid-cols-7 border-b border-slate-100">
+            <div *ngFor="let d of ['S','M','T','W','T','F','S']"
+                 class="py-2 text-center text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+              {{ d }}
+            </div>
+          </div>
 
-              <!-- Date block -->
-              <div class="flex-shrink-0 flex flex-col items-center justify-center bg-violet-50 rounded-xl w-12 h-12">
-                <span class="text-[10px] font-bold text-violet-400 uppercase leading-none">
-                  {{ event.event_date | date:'MMM' }}
-                </span>
-                <span class="text-xl font-extrabold text-violet-700 leading-tight">
-                  {{ event.event_date | date:'d' }}
-                </span>
+          <!-- Day cells grid -->
+          <div class="grid grid-cols-7">
+            <div *ngFor="let cell of calendarCells"
+                 (click)="selectCalendarDate(cell.dateStr)"
+                 class="relative min-h-[52px] border-b border-r border-slate-50 p-1 flex flex-col items-center
+                        transition-colors cursor-pointer select-none"
+                 [class.cursor-default]="!cell.dateStr"
+                 [class.bg-violet-600]="cell.dateStr && cell.dateStr === selectedCalendarDate"
+                 [class.hover:bg-violet-50]="cell.dateStr && cell.dateStr !== selectedCalendarDate">
+
+              <!-- Day number -->
+              <span *ngIf="cell.day"
+                    class="text-xs font-bold leading-none mt-1 w-6 h-6 flex items-center justify-center rounded-full"
+                    [class.bg-white]="cell.isToday && cell.dateStr !== selectedCalendarDate"
+                    [class.text-violet-700]="cell.isToday && cell.dateStr !== selectedCalendarDate"
+                    [class.ring-2]="cell.isToday && cell.dateStr !== selectedCalendarDate"
+                    [class.ring-violet-400]="cell.isToday && cell.dateStr !== selectedCalendarDate"
+                    [class.text-white]="cell.dateStr === selectedCalendarDate"
+                    [class.text-slate-300]="cell.isFuture && cell.dateStr !== selectedCalendarDate && !cell.isToday"
+                    [class.text-slate-700]="!cell.isFuture && !cell.isToday && cell.dateStr !== selectedCalendarDate">
+                {{ cell.day }}
+              </span>
+
+              <!-- Attendance dot (green/amber/red) — below day number -->
+              <span *ngIf="cell.attendanceDot === 'present'"
+                    class="mt-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+              <span *ngIf="cell.attendanceDot === 'absent'"
+                    class="mt-0.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0"></span>
+              <span *ngIf="cell.attendanceDot === 'late' || cell.attendanceDot === 'leave'"
+                    class="mt-0.5 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+
+              <!-- Event dots row (up to 3) -->
+              <div *ngIf="cell.events.length > 0" class="flex gap-0.5 mt-0.5 flex-wrap justify-center">
+                <span *ngFor="let ev of cell.events.slice(0, 3)"
+                      class="w-1.5 h-1.5 rounded-full shrink-0"
+                      [class.bg-red-400]="ev.type === 'holiday'"
+                      [class.bg-blue-400]="ev.type === 'event'"
+                      [class.bg-purple-400]="ev.type === 'exam'"
+                      [class.bg-amber-400]="ev.type === 'ptm'"></span>
               </div>
 
-              <!-- Content -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-2">
-                  <p class="font-bold text-slate-800 text-sm leading-snug">{{ event.title }}</p>
-                  <span class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full"
-                        [class]="eventTypeBadgeClass(event.type)">
-                    {{ eventTypeLabel(event.type) }}
-                  </span>
-                </div>
-                <p *ngIf="event.description"
-                   class="text-xs text-slate-500 mt-0.5 leading-relaxed">{{ event.description }}</p>
-                <div *ngIf="event.is_school_closed"
-                     class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600
-                            bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                  🏫 School closed
-                </div>
-              </div>
+            </div>
+          </div>
 
-            </li>
-          </ul>
-
+          <!-- Legend -->
+          <div class="flex items-center gap-4 flex-wrap px-4 py-2.5 border-t border-slate-100 bg-slate-50/60">
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="text-[10px] font-semibold text-slate-500">Present</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-red-500"></span>
+              <span class="text-[10px] font-semibold text-slate-500">Absent</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span class="text-[10px] font-semibold text-slate-500">Late/Leave</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+              <span class="text-[10px] font-semibold text-slate-500">Event</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-red-400"></span>
+              <span class="text-[10px] font-semibold text-slate-500">Holiday</span>
+            </div>
+          </div>
         </div>
+
+        <!-- ── Selected-date detail panel ── -->
+        <div *ngIf="calendarView === 'grid' && selectedCalendarDate && (selectedDateEvents.length > 0 || selectedDateAttendance)"
+             class="mb-4 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 space-y-2">
+          <p class="text-xs font-extrabold text-violet-600 uppercase tracking-widest">
+            {{ selectedCalendarDate | date:'EEEE, d MMMM' }}
+          </p>
+          <!-- Attendance status for that day -->
+          <div *ngIf="selectedDateAttendance" class="flex items-center gap-2">
+            <span class="text-sm">{{ selectedDateAttendance === 'present' ? '✅' : selectedDateAttendance === 'absent' ? '❌' : '⚠️' }}</span>
+            <span class="text-xs font-semibold text-slate-700 capitalize">{{ selectedDateAttendance }}</span>
+          </div>
+          <!-- Events for that day -->
+          <div *ngFor="let ev of selectedDateEvents"
+               class="flex items-start gap-2 bg-white rounded-xl px-3 py-2 shadow-sm border border-slate-100">
+            <span class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full mt-0.5"
+                  [class]="eventTypeBadgeClass(ev.type)">{{ eventTypeLabel(ev.type) }}</span>
+            <div>
+              <p class="text-sm font-bold text-slate-800">{{ ev.title }}</p>
+              <p *ngIf="ev.description" class="text-xs text-slate-500 mt-0.5">{{ ev.description }}</p>
+              <span *ngIf="ev.is_school_closed" class="text-[11px] font-semibold text-amber-600">🏫 School closed</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state (calendar grid, no events at all) -->
+        <div *ngIf="calendarView === 'grid' && events.length === 0"
+             class="flex flex-col items-center justify-center py-10 text-center">
+          <p class="text-slate-400 text-sm">No school events yet. Check back soon.</p>
+        </div>
+
+        <!-- ════════ LIST VIEW ════════ -->
+        <div *ngIf="calendarView === 'list'">
+
+          <!-- Empty -->
+          <div *ngIf="events.length === 0"
+               class="flex flex-col items-center justify-center py-20 text-center">
+            <div class="w-16 h-16 rounded-full bg-violet-50 flex items-center justify-center mb-4 text-3xl">📅</div>
+            <p class="font-bold text-slate-700 text-base">No events yet</p>
+            <p class="text-slate-400 text-sm mt-1">Check back soon for holidays and school events.</p>
+          </div>
+
+          <!-- Month-grouped event list -->
+          <div *ngIf="events.length > 0" class="space-y-6">
+            <div *ngFor="let group of eventsGroupedByMonth">
+
+              <!-- Month header -->
+              <div class="flex items-center gap-3 mb-3">
+                <span class="text-xs font-extrabold text-violet-600 uppercase tracking-widest">{{ group.month }}</span>
+                <div class="flex-1 h-px bg-violet-100"></div>
+              </div>
+
+              <!-- Events in this month -->
+              <ul class="space-y-2.5">
+                <li *ngFor="let event of group.events"
+                    class="flex gap-3 p-3.5 bg-white rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow">
+
+                  <!-- Date block -->
+                  <div class="flex-shrink-0 flex flex-col items-center justify-center bg-violet-50 rounded-xl w-12 h-12">
+                    <span class="text-[10px] font-bold text-violet-400 uppercase leading-none">
+                      {{ event.event_date | date:'MMM' }}
+                    </span>
+                    <span class="text-xl font-extrabold text-violet-700 leading-tight">
+                      {{ event.event_date | date:'d' }}
+                    </span>
+                  </div>
+
+                  <!-- Content -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                      <p class="font-bold text-slate-800 text-sm leading-snug">{{ event.title }}</p>
+                      <span class="shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-full"
+                            [class]="eventTypeBadgeClass(event.type)">
+                        {{ eventTypeLabel(event.type) }}
+                      </span>
+                    </div>
+                    <p *ngIf="event.description"
+                       class="text-xs text-slate-500 mt-0.5 leading-relaxed">{{ event.description }}</p>
+                    <div *ngIf="event.is_school_closed"
+                         class="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600
+                                bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                      🏫 School closed
+                    </div>
+                  </div>
+
+                </li>
+              </ul>
+
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </ng-container>
@@ -228,6 +393,65 @@
           </li>
         </ul>
 
+      </div>
+
+    </ng-container>
+
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <!-- PLANNER TAB                                                           -->
+    <!-- ══════════════════════════════════════════════════════════════════════ -->
+    <ng-container *ngIf="activeTab === 'planner'">
+
+      <!-- Loading -->
+      <div *ngIf="loadingDocuments" class="flex flex-col items-center justify-center py-20 gap-4">
+        <div class="w-10 h-10 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin"></div>
+        <p class="text-sm text-slate-400 font-medium">Loading documents…</p>
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="!loadingDocuments && documentsError"
+           class="rounded-2xl bg-red-50 border border-red-200 px-5 py-4 text-center">
+        <p class="text-sm font-semibold text-red-600">{{ documentsError }}</p>
+      </div>
+
+      <!-- Empty -->
+      <div *ngIf="!loadingDocuments && !documentsError && documents.length === 0"
+           class="flex flex-col items-center justify-center py-20 text-center">
+        <div class="w-16 h-16 rounded-full bg-violet-50 flex items-center justify-center mb-4 text-3xl">📋</div>
+        <p class="font-bold text-slate-700 text-base">No documents yet</p>
+        <p class="text-slate-400 text-sm mt-1">Your school will publish the monthly planner here.</p>
+      </div>
+
+      <!-- Document list -->
+      <div *ngIf="!loadingDocuments && !documentsError && documents.length > 0" class="space-y-3">
+        <a *ngFor="let doc of documents"
+           [href]="doc.file_url"
+           target="_blank" rel="noopener noreferrer"
+           class="flex items-center gap-4 bg-white rounded-2xl border border-slate-200
+                  shadow-sm px-4 py-3.5 hover:shadow-md hover:border-violet-300 transition-all active:scale-[0.98]">
+
+          <!-- Icon -->
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 text-2xl"
+               [class]="doc.file_type === 'pdf' ? 'bg-red-50' : 'bg-violet-50'">
+            {{ doc.file_type === 'pdf' ? '📕' : '\uD83D\uDDBC\uFE0F' }}
+          </div>
+
+          <!-- Info -->
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-slate-900 text-sm leading-tight truncate">{{ doc.title }}</p>
+            <p class="text-xs text-slate-400 mt-0.5">
+              {{ doc.file_type === 'pdf' ? 'PDF Document' : 'Image' }}
+              &middot; {{ doc.created_at | date:'d MMM y' }}
+            </p>
+          </div>
+
+          <!-- Download icon -->
+          <svg class="w-5 h-5 text-violet-400 shrink-0" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+        </a>
       </div>
 
     </ng-container>

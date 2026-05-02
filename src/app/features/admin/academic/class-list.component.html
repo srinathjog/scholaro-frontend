@@ -1,13 +1,50 @@
 <div class="px-4 sm:px-6 py-6">
   <!-- Header -->
-  <div class="mb-6 flex items-center justify-between">
+  <div class="mb-4 flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-gray-900">School Structure</h1>
       <p class="text-sm text-gray-500 mt-1">Classes and sections at your school</p>
     </div>
-    <span class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg">
-      {{ cards.length }} classes
-    </span>
+    <div class="flex items-center gap-2">
+      <span class="px-3 py-1.5 bg-indigo-50 text-indigo-700 text-sm font-semibold rounded-lg">
+        {{ cards.length }} classes
+      </span>
+      <button (click)="showAddClass = !showAddClass; addClassError = ''"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700
+                     text-white text-sm font-semibold rounded-lg transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add Class
+      </button>
+    </div>
+  </div>
+
+  <!-- Add Class inline form -->
+  <div *ngIf="showAddClass"
+       class="mb-5 bg-indigo-50 border border-indigo-200 rounded-2xl px-5 py-4">
+    <p class="text-xs font-bold text-indigo-700 uppercase tracking-wide mb-3">New Class</p>
+    <div class="flex items-center gap-2">
+      <input type="text" [(ngModel)]="newClassName"
+             placeholder="e.g. Summer Camp, Play Group…"
+             (keyup.enter)="addClass()"
+             class="flex-1 px-3.5 py-2 rounded-xl border border-indigo-200 text-sm
+                    focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white" />
+      <button (click)="addClass()" [disabled]="!newClassName.trim() || savingClass"
+              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold
+                     rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        {{ savingClass ? 'Saving…' : 'Save' }}
+      </button>
+      <button (click)="showAddClass = false; newClassName = ''; addClassError = ''"
+              class="px-3 py-2 bg-white border border-gray-200 text-gray-600 text-sm font-semibold
+                     rounded-xl hover:bg-gray-50 transition-colors">
+        Cancel
+      </button>
+    </div>
+    <p *ngIf="newClassName.trim()" class="mt-1.5 text-xs text-indigo-500">
+      Will be saved as: <strong>{{ previewClassName }}</strong>
+    </p>
+    <p *ngIf="addClassError" class="mt-1 text-xs text-red-600 font-semibold">{{ addClassError }}</p>
   </div>
 
   <!-- Loading -->

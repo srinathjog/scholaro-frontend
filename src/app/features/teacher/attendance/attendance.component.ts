@@ -44,6 +44,7 @@ export class AttendanceComponent implements OnInit {
   isAlreadyMarked = false;
   editMode = false;
   broadcastSent = false;
+  silentSaving = false;
 
   todayFormatted = new Date().toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short',
@@ -192,6 +193,24 @@ export class AttendanceComponent implements OnInit {
     });
   }
 
+  /** Save attendance without broadcasting to parents */
+  saveAttendanceOnly(): void {
+    if (this.silentSaving || this.broadcastSent) return;
+    this.silentSaving = true;
+    this.errorMessage = '';
+
+    // Attendance records are already saved per-student click.
+    // This just locks the UI without sending parent notifications.
+    this.broadcastSent = true;
+    this.isAlreadyMarked = true;
+    this.editMode = false;
+    this.markBroadcastSent();
+    this.successMessage = '✅ Attendance saved!';
+    this.silentSaving = false;
+    setTimeout(() => { this.successMessage = ''; this.cdr.detectChanges(); }, 3000);
+    this.cdr.detectChanges();
+  }
+
   /** Stats getters */
   get presentCount(): number {
     return this.records.filter((r) => r.status === 'present').length;
@@ -266,5 +285,10 @@ export class AttendanceComponent implements OnInit {
   /** Whether to show the locked summary view (not edit mode) */
   get showSummary(): boolean {
     return this.isAlreadyMarked && !this.editMode;
+  }
+
+  /** True when the selected date is today — only today allows teacher edits */
+  get isToday(): boolean {
+    return this.today === todayLocal();
   }
 }

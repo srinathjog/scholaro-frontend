@@ -59,13 +59,11 @@ export class InquiryFormComponent implements OnInit {
   submitError = '';
 
   readonly classOptions = [
-    'Play Group (2–3 yrs)',
-    'Nursery (3–4 yrs)',
-    'LKG (4–5 yrs)',
-    'UKG (5–6 yrs)',
-    'Grade 1',
-    'Grade 2',
-    'Grade 3',
+    'Playgroup',
+    'Nursery',
+    'LKG',
+    'UKG',
+    'Summer Camp',
     'Other',
   ];
 

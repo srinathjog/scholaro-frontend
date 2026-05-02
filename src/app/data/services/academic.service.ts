@@ -55,6 +55,11 @@ export interface SectionCount {
   count: number;
 }
 
+export interface ClassCount {
+  class_id: string;
+  count: number;
+}
+
 export interface CreateAssignmentPayload {
   teacher_id: string;
   class_id: string;
@@ -70,6 +75,14 @@ export class AcademicService {
 
   getClasses(): Observable<SchoolClass[]> {
     return this.http.get<SchoolClass[]>(`${this.api}/classes`);
+  }
+
+  createClass(data: { name: string; description?: string }): Observable<SchoolClass> {
+    return this.http.post<SchoolClass>(`${this.api}/classes`, data);
+  }
+
+  deleteClass(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.api}/classes/${id}`);
   }
 
   getSectionsByClass(classId: string): Observable<Section[]> {
@@ -96,6 +109,10 @@ export class AcademicService {
     return this.http.get<SectionCount[]>(`${this.api}/enrollments/section-counts`);
   }
 
+  getClassStudentCounts(): Observable<ClassCount[]> {
+    return this.http.get<ClassCount[]>(`${this.api}/enrollments/class-counts`);
+  }
+
   getAssignments(): Observable<TeacherAssignment[]> {
     return this.http.get<TeacherAssignment[]>(`${this.api}/teacher-assignments`);
   }
@@ -106,9 +123,5 @@ export class AcademicService {
 
   deleteAssignment(id: string): Observable<void> {
     return this.http.delete<void>(`${this.api}/teacher-assignments/${id}`);
-  }
-
-  deleteClass(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.api}/classes/${id}`);
   }
 }

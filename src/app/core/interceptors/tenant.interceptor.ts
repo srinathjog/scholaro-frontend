@@ -6,7 +6,11 @@ import {
   HttpRequest,
 } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { retry, timeout } from 'rxjs/operators';
 import { TenantService } from '../services/tenant.service';
+
+/** 15 s timeout — enough for mobile 4G/5G on a slow cell. */
+const REQUEST_TIMEOUT_MS = 15_000;
 
 @Injectable()
 export class TenantInterceptor implements HttpInterceptor {
@@ -23,6 +27,16 @@ export class TenantInterceptor implements HttpInterceptor {
       headers = headers.set('Authorization', `Bearer ${token}`);
     }
     const cloned = req.clone({ headers });
-    return next.handle(cloned);
+    const handled$ = next.handle(cloned);
+
+    // Apply resilient-fetch only to GET requests — safe to retry idempotent reads.
+    // Mutating requests (POST/PATCH/DELETE) are left as-is to avoid duplicate side effects.
+    if (req.method === 'GET') {
+      return handled$.pipe(
+        timeout(REQUEST_TIMEOUT_MS),
+        retry(2),
+      );
+    }
+    return handled$;
   }
 }

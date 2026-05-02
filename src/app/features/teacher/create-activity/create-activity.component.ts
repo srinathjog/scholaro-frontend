@@ -229,40 +229,11 @@ export class CreateActivityComponent implements OnInit {
       return;
     }
 
-    // Compress images sequentially — one at a time to avoid RAM spikes
-    this.compressing = true;
-    this.compressionProgress = 0;
-    this.compressionCurrent = 0;
-    this.compressionTotal = imageFiles.length;
-    this.cdr.detectChanges();
-
-    const { default: imageCompression } = await import('browser-image-compression');
-
-    const options = {
-      maxSizeMB: 0.3,
-      maxWidthOrHeight: 1280,
-      useWebWorker: true,
-      initialQuality: 0.7,
-    };
-
-    let processed = 0;
-    for (const file of imageFiles) {
-      this.compressionCurrent = processed + 1;
-      this.cdr.detectChanges();
-      try {
-        const compressed = await imageCompression(file, options);
-        this.selectedFiles.push(compressed);
-        this.previews.push(URL.createObjectURL(compressed));
-      } catch {
-        this.selectedFiles.push(file);
-        this.previews.push(URL.createObjectURL(file));
-      }
-      processed++;
-      this.compressionProgress = Math.round((processed / imageFiles.length) * 100);
-      this.cdr.detectChanges();
+    // Store raw files immediately — compression happens one-by-one at submit time
+    for (const file of filesToProcess) {
+      this.selectedFiles.push(file);
+      this.previews.push(URL.createObjectURL(file));
     }
-
-    this.compressing = false;
     this.cdr.detectChanges();
   }
 
@@ -291,7 +262,7 @@ export class CreateActivityComponent implements OnInit {
     this.errorMessage = '';
 
     try {
-      // ── Step 1: Upload media sequentially — one file at a time ───────────────
+      // ── Step 1: Sequential queue — compress then upload each photo one-by-one ─
       const mediaUrls: string[] = [];
       const mediaTypes: string[] = [];
       if (this.selectedFiles.length) {
@@ -301,13 +272,31 @@ export class CreateActivityComponent implements OnInit {
         this.uploadProgress = 0;
         this.cdr.detectChanges();
 
+        const { default: imageCompression } = await import('browser-image-compression');
+        const compressionOptions = {
+          maxSizeMB: 0.3,
+          maxWidthOrHeight: 1280,
+          useWebWorker: true,
+          initialQuality: 0.7,
+        };
+
         for (let i = 0; i < this.selectedFiles.length; i++) {
           this.uploadCurrent = i + 1;
           this.uploadProgress = 0;
           this.cdr.detectChanges();
 
+          // Compress first, then upload — keeps memory low (one file at a time)
+          let fileToUpload = this.selectedFiles[i];
+          if (fileToUpload.type.startsWith('image/')) {
+            try {
+              fileToUpload = await imageCompression(fileToUpload, compressionOptions);
+            } catch {
+              // compression failed — upload original
+            }
+          }
+
           const result = await this.uploadService.uploadSingleFile(
-            this.selectedFiles[i],
+            fileToUpload,
             (pct) => { this.uploadProgress = pct; this.cdr.detectChanges(); },
           );
           mediaUrls.push(result.url);

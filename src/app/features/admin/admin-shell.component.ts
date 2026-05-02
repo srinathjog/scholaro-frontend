@@ -188,6 +188,15 @@ import { filter } from 'rxjs/operators';
             Global Feed
           </a>
 
+          <a routerLink="/admin/documents" routerLinkActive="bg-indigo-50 text-indigo-700"
+             (click)="onNavClick()"
+             class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+            <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Documents
+          </a>
+
 
           <a routerLink="/admin/settings" routerLinkActive="bg-indigo-50 text-indigo-700"
              (click)="onNavClick()"
