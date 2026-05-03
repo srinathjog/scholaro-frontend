@@ -9,8 +9,10 @@ import { Observable } from 'rxjs';
 import { retry, timeout } from 'rxjs/operators';
 import { TenantService } from '../services/tenant.service';
 
-/** 15 s timeout — enough for mobile 4G/5G on a slow cell. */
-const REQUEST_TIMEOUT_MS = 15_000;
+/** 15 s timeout for GET reads — safe to retry on mobile 4G/5G. */
+const GET_TIMEOUT_MS = 15_000;
+/** 60 s timeout for mutating requests — covers large-payload POSTs like activity creation. */
+const MUTATE_TIMEOUT_MS = 60_000;
 
 @Injectable()
 export class TenantInterceptor implements HttpInterceptor {
@@ -29,14 +31,15 @@ export class TenantInterceptor implements HttpInterceptor {
     const cloned = req.clone({ headers });
     const handled$ = next.handle(cloned);
 
-    // Apply resilient-fetch only to GET requests — safe to retry idempotent reads.
-    // Mutating requests (POST/PATCH/DELETE) are left as-is to avoid duplicate side effects.
+    // GET: 15s with 2 retries (idempotent reads).
+    // POST/PATCH/PUT/DELETE: 60s, no retry (avoid duplicate side effects).
+    // Note: file uploads use XHR directly and bypass this interceptor.
     if (req.method === 'GET') {
       return handled$.pipe(
-        timeout(REQUEST_TIMEOUT_MS),
+        timeout(GET_TIMEOUT_MS),
         retry(2),
       );
     }
-    return handled$;
+    return handled$.pipe(timeout(MUTATE_TIMEOUT_MS));
   }
 }

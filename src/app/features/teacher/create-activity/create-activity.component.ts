@@ -328,6 +328,11 @@ export class CreateActivityComponent implements OnInit {
         }
       }
 
+      // Safety check: if teacher selected files but none made it through, stop here
+      if (this.selectedFiles.length > 0 && mediaUrls.length === 0) {
+        throw new Error('No photos were successfully processed. Please try again.');
+      }
+
       // ── Step 2: Edit mode ─────────────────────────────────────────────────
       if (this.isEditMode && this.activityId) {
         const patch: any = {
@@ -360,6 +365,7 @@ export class CreateActivityComponent implements OnInit {
       }
 
       // ── Step 4: POST to backend ───────────────────────────────────────────
+      console.log('Sending these URLs to backend:', mediaUrls);
       await this.activityService.postActivity(payload).toPromise();
 
       this.successMessage = 'Post Shared with Parents ✓';
