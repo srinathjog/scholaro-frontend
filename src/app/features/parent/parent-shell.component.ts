@@ -13,7 +13,8 @@ import { SettingsService } from '../../data/services/settings.service';
   imports: [CommonModule, RouterModule],
   template: `
     <!-- ═══ School Branded Header ═══ -->
-    <header class="fixed top-0 inset-x-0 z-40 h-16 flex items-center justify-center shadow-sm safe-area-top backdrop-blur-md"
+    <header class="fixed top-0 inset-x-0 z-40 flex items-end justify-center pb-3 shadow-sm safe-area-top backdrop-blur-md"
+            style="min-height: calc(4rem + env(safe-area-inset-top, 0px))"
             [style.background-color]="primaryColor ? primaryColor + 'E6' : 'rgba(99,102,241,0.9)'">
       <span class="text-white font-bold text-sm tracking-wide truncate max-w-[220px] drop-shadow-sm"
             [title]="schoolName">{{ schoolName || 'Scholaro' }}</span>
@@ -21,7 +22,8 @@ import { SettingsService } from '../../data/services/settings.service';
 
     <!-- iOS Push Notification Banner -->
     <div *ngIf="showNotifBanner"
-         class="fixed top-16 inset-x-0 z-50 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
+         class="fixed inset-x-0 z-50 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg"
+         style="top: calc(4rem + env(safe-area-inset-top, 0px))">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
           <span class="text-lg">🔔</span>
@@ -44,7 +46,8 @@ import { SettingsService } from '../../data/services/settings.service';
 
     <!-- Install Banner -->
     <div *ngIf="showInstallBanner"
-         class="fixed top-16 inset-x-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
+         class="fixed inset-x-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg"
+         style="top: calc(4rem + env(safe-area-inset-top, 0px))">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -67,7 +70,11 @@ import { SettingsService } from '../../data/services/settings.service';
       </div>
     </div>
 
-    <div class="min-h-screen pb-16 pt-16" [class.pt-28]="showInstallBanner || showNotifBanner">
+    <div class="min-h-screen pb-16"
+         [style.paddingTop]="showInstallBanner || showNotifBanner
+           ? 'calc(7rem + env(safe-area-inset-top, 0px))'
+           : 'calc(4rem + env(safe-area-inset-top, 0px))'"
+    >
       <router-outlet></router-outlet>
     </div>
 
