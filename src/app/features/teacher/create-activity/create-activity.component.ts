@@ -282,7 +282,11 @@ export class CreateActivityComponent implements OnInit {
 
         for (let i = 0; i < this.selectedFiles.length; i++) {
           this.uploadCurrent = i + 1;
-          this.uploadProgress = 0;
+          // Overall progress: each file is worth (100 / total)% of the bar.
+          // Start each file at the % already completed by previous files.
+          const baseProgress = Math.round((i / this.selectedFiles.length) * 100);
+          const fileShare = 100 / this.selectedFiles.length;
+          this.uploadProgress = baseProgress;
           this.cdr.detectChanges();
 
           // Compress first, then upload — keeps memory low (one file at a time)
@@ -295,16 +299,33 @@ export class CreateActivityComponent implements OnInit {
             }
           }
 
-          const result = await this.uploadService.uploadSingleFile(
-            fileToUpload,
-            (pct) => { this.uploadProgress = pct; this.cdr.detectChanges(); },
-          );
+          let result: { url: string; media_type: string };
+          try {
+            result = await this.uploadService.uploadSingleFile(
+              fileToUpload,
+              (pct) => {
+                // Map per-file XHR progress (0–100) into this file's slice of the bar
+                this.uploadProgress = Math.round(baseProgress + (pct / 100) * fileShare);
+                this.cdr.detectChanges();
+              },
+            );
+          } catch {
+            throw new Error(`Upload failed at photo ${i + 1} of ${this.selectedFiles.length}. Please check your connection and try again.`);
+          }
+          // Ensure bar reaches the end of this file's slice on completion
+          this.uploadProgress = Math.round(((i + 1) / this.selectedFiles.length) * 100);
+          this.cdr.detectChanges();
           mediaUrls.push(result.url);
           mediaTypes.push(result.media_type);
         }
 
         this.uploading = false;
         this.cdr.detectChanges();
+
+        // Guard: all files must have uploaded successfully before calling backend
+        if (mediaUrls.length !== this.selectedFiles.length) {
+          throw new Error(`Upload incomplete: only ${mediaUrls.length} of ${this.selectedFiles.length} photos were uploaded. Please try again.`);
+        }
       }
 
       // ── Step 2: Edit mode ─────────────────────────────────────────────────
