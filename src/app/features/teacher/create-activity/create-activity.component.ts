@@ -43,6 +43,8 @@ export class CreateActivityComponent implements OnInit {
   form!: FormGroup;
   assignments: TeacherAssignment[] = [];
   selectedFiles: File[] = [];
+  /** URLs of photos already saved on the server (edit mode only). */
+  existingMediaUrls: string[] = [];
   previews: string[] = [];
   loadingPreviews = 0;
   submitting = false;
@@ -109,7 +111,9 @@ export class CreateActivityComponent implements OnInit {
           });
           // Store the original post date so we can skip the today-only attendance check
           this.activityDate = act.created_at ? act.created_at.slice(0, 10) : null;
-          this.previews = act.media.map(m => m.media_url);
+          // Separate existing server URLs from new file selections
+          this.existingMediaUrls = act.media.map(m => m.media_url);
+          this.previews = [...this.existingMediaUrls];
           this.selectedFiles = [];
           this.isDataLoading = false;
           this.cdr.detectChanges();
@@ -208,7 +212,7 @@ export class CreateActivityComponent implements OnInit {
     input.value = '';
 
     // ── Hard limit: max MAX_MEDIA files total ─────────────────────────────
-    const slotsRemaining = this.MAX_MEDIA - this.selectedFiles.length;
+    const slotsRemaining = this.MAX_MEDIA - this.existingMediaUrls.length - this.selectedFiles.length;
     if (slotsRemaining <= 0) {
       this.errorMessage = `⚠️ You can upload up to 40 photos for this classroom moment.`;
       this.cdr.detectChanges();
@@ -238,7 +242,13 @@ export class CreateActivityComponent implements OnInit {
   }
 
   removeMedia(index: number): void {
-    this.selectedFiles.splice(index, 1);
+    if (index < this.existingMediaUrls.length) {
+      // Removing a photo already saved on the server
+      this.existingMediaUrls.splice(index, 1);
+    } else {
+      // Removing a newly picked (not yet uploaded) photo
+      this.selectedFiles.splice(index - this.existingMediaUrls.length, 1);
+    }
     this.previews.splice(index, 1);
   }
 
@@ -274,7 +284,7 @@ export class CreateActivityComponent implements OnInit {
 
         const { default: imageCompression } = await import('browser-image-compression');
         const compressionOptions = {
-          maxSizeMB: 0.3,
+          maxSizeMB: 0.2,
           maxWidthOrHeight: 1080,
           useWebWorker: true,
           initialQuality: 0.7,
@@ -317,6 +327,9 @@ export class CreateActivityComponent implements OnInit {
           this.cdr.detectChanges();
           mediaUrls.push(result.url);
           mediaTypes.push(result.media_type);
+
+          // Yield to the browser event loop so the progress bar renders before next photo
+          await new Promise<void>(resolve => setTimeout(resolve, 100));
         }
 
         this.uploading = false;
@@ -335,13 +348,20 @@ export class CreateActivityComponent implements OnInit {
 
       // ── Step 2: Edit mode ─────────────────────────────────────────────────
       if (this.isEditMode && this.activityId) {
+        // Combine: existing server photos + newly uploaded photos
+        const totalUrls = [...this.existingMediaUrls, ...mediaUrls];
+        const totalTypes = [
+          ...this.existingMediaUrls.map(() => 'image' as const),
+          ...mediaTypes,
+        ];
         const patch: any = {
           class_id: this.form.value.class_id,
           title: this.form.value.title,
           description: this.form.value.description || undefined,
           activity_type: this.form.value.activity_type || 'moment',
+          media_urls: totalUrls,
+          media_types: totalTypes,
         };
-        if (mediaUrls.length) patch.media_urls = mediaUrls;
 
         await this.activityService.updateActivity(this.activityId, patch).toPromise();
         this.successMessage = 'Post updated ✓';
