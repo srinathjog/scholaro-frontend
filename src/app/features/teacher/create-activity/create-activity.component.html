@@ -383,7 +383,7 @@
         <div *ngIf="uploading" class="mb-4">
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-xs font-semibold text-indigo-600">
-              Optimizing &amp; Uploading photo {{ uploadCurrent }} of {{ uploadTotal }}…
+              {{ compressing ? ('Compressing photo ' + compressionCurrent + ' of ' + uploadTotal + '\u2026') : (uploadCurrent + ' of ' + uploadTotal + ' photos uploaded\u2026') }}
             </span>
             <span class="text-xs font-bold text-indigo-600">{{ uploadProgress }}%</span>
           </div>
@@ -415,7 +415,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
             </svg>
-            {{ uploading ? ('Optimizing & Uploading photo ' + uploadCurrent + ' of ' + uploadTotal + '…') : (submitting ? (isEditMode ? 'Updating…' : 'Posting…') : (isEditMode ? 'Update Post' : 'Post to Parents')) }}
+            {{ compressing ? ('Compressing photo ' + compressionCurrent + ' of ' + uploadTotal + '…') : (uploading ? (uploadCurrent + ' of ' + uploadTotal + ' photos uploaded…') : (submitting ? (isEditMode ? 'Updating…' : 'Posting…') : (isEditMode ? 'Update Post' : 'Post to Parents'))) }}
           </button>
         </div>
       </div>
@@ -434,9 +434,9 @@
 
       <!-- Title + subtitle -->
       <div class="text-center">
-        <p class="font-bold text-gray-900 text-base">Optimizing &amp; Uploading</p>
+        <p class="font-bold text-gray-900 text-base">{{ compressing ? 'Compressing Photos' : 'Uploading Photos' }}</p>
         <p class="text-sm text-gray-500 mt-1">
-          {{ 'Photo ' + uploadCurrent + ' of ' + uploadTotal + (uploadCurrent < uploadTotal ? ' — almost there…' : ' — finishing up…') }}
+          {{ compressing ? ('Photo ' + compressionCurrent + ' of ' + uploadTotal + ' — compressing…') : (uploadCurrent + ' of ' + uploadTotal + ' uploaded ✓') }}
         </p>
       </div>
 
@@ -444,7 +444,7 @@
       <div class="w-full">
         <div class="flex justify-between mb-1.5">
           <span class="text-xs text-gray-500">
-            {{ uploadProgress < 100 ? 'Optimizing &amp; uploading…' : 'Finishing up…' }}
+            {{ compressing ? 'Compressing\u2026' : (uploadProgress < 100 ? 'Uploading directly to server\u2026' : 'Finishing up\u2026') }}
           </span>
           <span class="text-xs font-bold text-indigo-600">
             {{ uploadProgress }}%
