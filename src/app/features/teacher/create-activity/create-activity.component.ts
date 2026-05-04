@@ -6,7 +6,7 @@ import {
   CreateActivityDto,
   TeacherAssignment,
 } from '../../../data/services/activity.service';
-import { UploadService } from '../../../core/services/upload.service';
+import { UploadService, SignedUploadSlot } from '../../../core/services/upload.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AttendanceService } from '../../../data/services/attendance.service';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -43,6 +43,8 @@ export class CreateActivityComponent implements OnInit {
   form!: FormGroup;
   assignments: TeacherAssignment[] = [];
   selectedFiles: File[] = [];
+  /** URLs of photos already saved on the server (edit mode only). */
+  existingMediaUrls: string[] = [];
   previews: string[] = [];
   loadingPreviews = 0;
   submitting = false;
@@ -109,7 +111,9 @@ export class CreateActivityComponent implements OnInit {
           });
           // Store the original post date so we can skip the today-only attendance check
           this.activityDate = act.created_at ? act.created_at.slice(0, 10) : null;
-          this.previews = act.media.map(m => m.media_url);
+          // Separate existing server URLs from new file selections
+          this.existingMediaUrls = act.media.map(m => m.media_url);
+          this.previews = [...this.existingMediaUrls];
           this.selectedFiles = [];
           this.isDataLoading = false;
           this.cdr.detectChanges();
@@ -208,7 +212,7 @@ export class CreateActivityComponent implements OnInit {
     input.value = '';
 
     // ── Hard limit: max MAX_MEDIA files total ─────────────────────────────
-    const slotsRemaining = this.MAX_MEDIA - this.selectedFiles.length;
+    const slotsRemaining = this.MAX_MEDIA - this.existingMediaUrls.length - this.selectedFiles.length;
     if (slotsRemaining <= 0) {
       this.errorMessage = `⚠️ You can upload up to 40 photos for this classroom moment.`;
       this.cdr.detectChanges();
@@ -238,7 +242,13 @@ export class CreateActivityComponent implements OnInit {
   }
 
   removeMedia(index: number): void {
-    this.selectedFiles.splice(index, 1);
+    if (index < this.existingMediaUrls.length) {
+      // Removing a photo already saved on the server
+      this.existingMediaUrls.splice(index, 1);
+    } else {
+      // Removing a newly picked (not yet uploaded) photo
+      this.selectedFiles.splice(index - this.existingMediaUrls.length, 1);
+    }
     this.previews.splice(index, 1);
   }
 
@@ -258,71 +268,85 @@ export class CreateActivityComponent implements OnInit {
 
     this.submitting = true;
     this.uploading = false;
+    this.compressing = false;
     this.successMessage = '';
     this.errorMessage = '';
 
     try {
-      // ── Step 1: Sequential queue — compress then upload each photo one-by-one ─
       const mediaUrls: string[] = [];
       const mediaTypes: string[] = [];
+
       if (this.selectedFiles.length) {
+        const total = this.selectedFiles.length;
+
+        // ── Phase A: Compress all files sequentially ──────────────────────
         this.uploading = true;
-        this.uploadCurrent = 0;
-        this.uploadTotal = this.selectedFiles.length;
+        this.compressing = true;
+        this.compressionCurrent = 0;
+        this.uploadTotal = total;
         this.uploadProgress = 0;
         this.cdr.detectChanges();
 
         const { default: imageCompression } = await import('browser-image-compression');
         const compressionOptions = {
-          maxSizeMB: 0.3,
+          maxSizeMB: 0.2,
           maxWidthOrHeight: 1080,
           useWebWorker: true,
           initialQuality: 0.7,
         };
 
+        const compressedFiles: File[] = [];
         for (let i = 0; i < this.selectedFiles.length; i++) {
-          this.uploadCurrent = i + 1;
-          // Overall progress: each file is worth (100 / total)% of the bar.
-          // Start each file at the % already completed by previous files.
-          const baseProgress = Math.round((i / this.selectedFiles.length) * 100);
-          const fileShare = 100 / this.selectedFiles.length;
-          this.uploadProgress = baseProgress;
+          this.compressionCurrent = i + 1;
+          // Compression fills the first 50% of the progress bar
+          this.uploadProgress = Math.round((i / total) * 50);
           this.cdr.detectChanges();
 
-          // Compress first, then upload — keeps memory low (one file at a time)
-          let fileToUpload = this.selectedFiles[i];
-          if (fileToUpload.type.startsWith('image/')) {
+          let file = this.selectedFiles[i];
+          if (file.type.startsWith('image/')) {
             try {
-              fileToUpload = await imageCompression(fileToUpload, compressionOptions);
+              file = await imageCompression(file, compressionOptions);
             } catch {
-              // compression failed — upload original
+              // fallback to original if compression fails
             }
           }
+          compressedFiles.push(file);
+        }
 
-          let result: { url: string; media_type: string };
-          try {
-            result = await this.uploadService.uploadSingleFile(
-              fileToUpload,
-              (pct) => {
-                // Map per-file XHR progress (0–100) into this file's slice of the bar
-                this.uploadProgress = Math.round(baseProgress + (pct / 100) * fileShare);
-                this.cdr.detectChanges();
-              },
-            );
-          } catch {
-            throw new Error(`Upload failed at photo ${i + 1} of ${this.selectedFiles.length}. Please check your connection and try again.`);
-          }
-          // Ensure bar reaches the end of this file's slice on completion
-          this.uploadProgress = Math.round(((i + 1) / this.selectedFiles.length) * 100);
-          this.cdr.detectChanges();
-          mediaUrls.push(result.url);
-          mediaTypes.push(result.media_type);
+        // ── Phase B: Get N signed upload URLs from backend (1 API call) ───
+        this.compressing = false;
+        this.uploadCurrent = 0;
+        this.uploadProgress = 50;
+        this.cdr.detectChanges();
+
+        let slots: SignedUploadSlot[];
+        try {
+          slots = await this.uploadService.getSignedUploadUrls(this.selectedFiles);
+        } catch {
+          throw new Error('Could not prepare upload. Please check your connection and try again.');
+        }
+
+        // ── Phase C: Upload all files directly to Supabase — 4 at a time ──
+        await this.uploadService.uploadAllParallel(
+          compressedFiles,
+          slots,
+          (_index) => {
+            this.uploadCurrent++;
+            // Upload fills the second 50% of the progress bar
+            this.uploadProgress = 50 + Math.round((this.uploadCurrent / total) * 50);
+            this.cdr.detectChanges();
+          },
+        );
+
+        // Collect public URLs — order matches selectedFiles order
+        for (const slot of slots) {
+          mediaUrls.push(slot.publicUrl);
+          mediaTypes.push('image');
         }
 
         this.uploading = false;
         this.cdr.detectChanges();
 
-        // Guard: all files must have uploaded successfully before calling backend
         if (mediaUrls.length !== this.selectedFiles.length) {
           throw new Error(`Upload incomplete: only ${mediaUrls.length} of ${this.selectedFiles.length} photos were uploaded. Please try again.`);
         }
@@ -333,15 +357,21 @@ export class CreateActivityComponent implements OnInit {
         throw new Error('No photos were successfully processed. Please try again.');
       }
 
-      // ── Step 2: Edit mode ─────────────────────────────────────────────────
+      // ── Edit mode ─────────────────────────────────────────────────────────
       if (this.isEditMode && this.activityId) {
+        const totalUrls = [...this.existingMediaUrls, ...mediaUrls];
+        const totalTypes = [
+          ...this.existingMediaUrls.map(() => 'image' as const),
+          ...mediaTypes,
+        ];
         const patch: any = {
           class_id: this.form.value.class_id,
           title: this.form.value.title,
           description: this.form.value.description || undefined,
           activity_type: this.form.value.activity_type || 'moment',
+          media_urls: totalUrls,
+          media_types: totalTypes,
         };
-        if (mediaUrls.length) patch.media_urls = mediaUrls;
 
         await this.activityService.updateActivity(this.activityId, patch).toPromise();
         this.successMessage = 'Post updated ✓';
@@ -350,7 +380,7 @@ export class CreateActivityComponent implements OnInit {
         return;
       }
 
-      // ── Step 3: Build payload ─────────────────────────────────────────────
+      // ── Create mode ───────────────────────────────────────────────────────
       const payload: CreateActivityDto = {
         class_id: this.form.value.class_id,
         title: this.form.value.title,
@@ -359,12 +389,10 @@ export class CreateActivityComponent implements OnInit {
         media_urls: mediaUrls,
         media_types: mediaTypes,
       };
-      // Include student_ids if posting to specific students
       if (this.audienceType === 'student' && this.selectedStudentIds.length > 0) {
         payload.student_ids = [...this.selectedStudentIds];
       }
 
-      // ── Step 4: POST to backend ───────────────────────────────────────────
       console.log('Sending these URLs to backend:', mediaUrls);
       await this.activityService.postActivity(payload).toPromise();
 
@@ -379,13 +407,12 @@ export class CreateActivityComponent implements OnInit {
       setTimeout(() => this.router.navigate(['/teacher/history']), 1500);
 
     } catch (err: any) {
-      // ── Any failure in the chain lands here ──────────────────────────────
       this.errorMessage = err?.error?.message || err?.message || 'Something went wrong. Please try again.';
       this.cdr.detectChanges();
     } finally {
-      // ── Loader always stops, no matter what ──────────────────────────────
       this.submitting = false;
       this.uploading = false;
+      this.compressing = false;
       this.cdr.detectChanges();
     }
   }
