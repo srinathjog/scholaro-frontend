@@ -322,8 +322,8 @@ export class CreateActivityComponent implements OnInit {
         let slots: SignedUploadSlot[];
         try {
           slots = await this.uploadService.getSignedUploadUrls(this.selectedFiles);
-        } catch {
-          throw new Error('Could not prepare upload. Please check your connection and try again.');
+        } catch (e: any) {
+          throw new Error(e?.message || 'Could not prepare upload. Please check your connection and try again.');
         }
 
         // ── Phase C: Upload all files directly to Supabase — 4 at a time ──
