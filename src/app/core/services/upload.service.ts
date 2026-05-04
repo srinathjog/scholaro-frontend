@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
+import { TenantService } from './tenant.service';
 
 export interface UploadedMedia {
   url: string;
@@ -15,7 +16,10 @@ export interface SignedUploadSlot {
 
 @Injectable({ providedIn: 'root' })
 export class UploadService {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private tenantService: TenantService,
+  ) {}
 
   /**
    * Ask the backend to generate N Supabase signed upload URLs — one per file.
@@ -25,17 +29,23 @@ export class UploadService {
     files: File[],
   ): Promise<SignedUploadSlot[]> {
     const token = this.authService.getToken();
+    const tenantId = this.tenantService.getTenantId();
     const res = await fetch(`${environment.apiUrl}/activities/upload-urls`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(tenantId ? { 'x-tenant-id': tenantId } : {}),
       },
       body: JSON.stringify({
         files: files.map(f => ({ contentType: f.type || 'image/jpeg' })),
       }),
     });
-    if (!res.ok) throw new Error(`Could not get upload URLs (${res.status})`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.error(`[UploadService] upload-urls failed ${res.status}:`, body);
+      throw new Error(`Server returned ${res.status} preparing upload. Please try again.`);
+    }
     const data = await res.json();
     return data.urls as SignedUploadSlot[];
   }
