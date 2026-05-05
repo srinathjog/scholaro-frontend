@@ -35,16 +35,21 @@ export class AttendanceComponent implements OnInit {
   today = todayLocal();
 
   loading = false;
-  saving = new Set<string>(); // enrollment IDs currently saving
   broadcasting = false;
   successMessage = '';
   errorMessage = '';
 
-  // Completion state: prevents duplicate broadcasts
+  // Completion state
   isAlreadyMarked = false;
   editMode = false;
   broadcastSent = false;
-  silentSaving = false;
+  isBulkSaving = false;
+
+  /**
+   * All status changes live here first — nothing hits the DB until onSave().
+   * Seeded from saved records on load and on enterEditMode().
+   */
+  pendingStatuses = new Map<string, AttendanceStatus>();
 
   todayFormatted = new Date().toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short',
@@ -89,7 +94,13 @@ export class AttendanceComponent implements OnInit {
         this.records = records;
         this.loading = false;
 
-        // Detect completion: if every student already has a record, lock the UI
+        // Seed pending statuses from saved records so getStatus() works immediately
+        this.pendingStatuses.clear();
+        for (const rec of records) {
+          this.pendingStatuses.set(rec.enrollment_id, rec.status);
+        }
+
+        // Detect completion: if every student already has a record, show summary
         this.isAlreadyMarked = students.length > 0 && records.length >= students.length;
         this.editMode = false;
         this.broadcastSent = this.isBroadcastSent();
@@ -104,68 +115,25 @@ export class AttendanceComponent implements OnInit {
     });
   }
 
-  /** Get current status for a student (from already-saved records) */
+  /** Get current status — always reads from local pending state */
   getStatus(enrollmentId: string): AttendanceStatus | null {
-    const rec = this.records.find((r) => r.enrollment_id === enrollmentId);
-    return rec ? rec.status : null;
+    return this.pendingStatuses.get(enrollmentId) ?? null;
   }
 
-  /** Mark a single student */
-  markStudent(enrollmentId: string, status: AttendanceStatus): void {
-    if (this.saving.has(enrollmentId)) return;
-    this.saving.add(enrollmentId);
-    this.errorMessage = '';
-
-    this.attendanceService
-      .markAttendance({ enrollment_id: enrollmentId, date: this.today, status })
-      .subscribe({
-        next: (record) => {
-          // Upsert in local records
-          const idx = this.records.findIndex((r) => r.enrollment_id === enrollmentId);
-          if (idx >= 0) {
-            this.records[idx] = record;
-          } else {
-            this.records.push(record);
-          }
-          this.saving.delete(enrollmentId);
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.errorMessage = 'Failed to mark attendance.';
-          this.saving.delete(enrollmentId);
-          this.cdr.detectChanges();
-        },
-      });
+  /** Update status instantly in local state. No API call. Zero lag. */
+  updateStatusLocally(enrollmentId: string, status: AttendanceStatus): void {
+    this.pendingStatuses.set(enrollmentId, status);
+    this.cdr.detectChanges();
   }
 
-  /** Mark all unmarked students as Present (one tap) */
+  /** Mark all currently-unmarked students as Present locally */
   markAllPresent(): void {
-    const unmarkedIds = this.students
-      .filter((s) => !this.getStatus(s.id))
-      .map((s) => s.id);
-    if (!unmarkedIds.length) return;
-
-    this.saving = new Set(unmarkedIds);
-    this.attendanceService
-      .bulkMarkPresent(unmarkedIds)
-      .subscribe({
-        next: (newRecords) => {
-          for (const rec of newRecords) {
-            const idx = this.records.findIndex((r) => r.enrollment_id === rec.enrollment_id);
-            if (idx >= 0) this.records[idx] = rec;
-            else this.records.push(rec);
-          }
-          this.saving.clear();
-          this.successMessage = `✅ ${newRecords.length} students marked present!`;
-          setTimeout(() => { this.successMessage = ''; this.cdr.detectChanges(); }, 3000);
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.errorMessage = 'Bulk marking failed.';
-          this.saving.clear();
-          this.cdr.detectChanges();
-        },
-      });
+    for (const s of this.students) {
+      if (!this.pendingStatuses.has(s.id)) {
+        this.pendingStatuses.set(s.id, 'present');
+      }
+    }
+    this.cdr.detectChanges();
   }
 
   /** Broadcast "arrived safely" to all present students' parents */
@@ -183,7 +151,6 @@ export class AttendanceComponent implements OnInit {
         this.isAlreadyMarked = true;
         this.editMode = false;
         this.cdr.detectChanges();
-        // Don't navigate away — show the summary
       },
       error: () => {
         this.errorMessage = 'Failed to send notifications.';
@@ -193,43 +160,30 @@ export class AttendanceComponent implements OnInit {
     });
   }
 
-  /** Save attendance without broadcasting to parents */
-  saveAttendanceOnly(): void {
-    if (this.silentSaving || this.broadcastSent) return;
-    this.silentSaving = true;
-    this.errorMessage = '';
-
-    // Attendance records are already saved per-student click.
-    // This just locks the UI without sending parent notifications.
-    this.broadcastSent = true;
-    this.isAlreadyMarked = true;
-    this.editMode = false;
-    this.markBroadcastSent();
-    this.successMessage = '✅ Attendance saved!';
-    this.silentSaving = false;
-    setTimeout(() => { this.successMessage = ''; this.cdr.detectChanges(); }, 3000);
-    this.cdr.detectChanges();
-  }
-
-  /** Stats getters */
+  /** Stats getters — read from local pending state for instant accuracy */
   get presentCount(): number {
-    return this.records.filter((r) => r.status === 'present').length;
+    return Array.from(this.pendingStatuses.values()).filter(s => s === 'present').length;
   }
 
   get absentCount(): number {
-    return this.records.filter((r) => r.status === 'absent').length;
+    return Array.from(this.pendingStatuses.values()).filter(s => s === 'absent').length;
   }
 
   get leaveCount(): number {
-    return this.records.filter((r) => r.status === 'leave').length;
+    return Array.from(this.pendingStatuses.values()).filter(s => s === 'leave').length;
   }
 
   get unmarkedCount(): number {
-    return this.students.length - this.records.length;
+    return this.students.filter(s => !this.pendingStatuses.has(s.id)).length;
   }
 
   get allMarked(): boolean {
-    return this.students.length > 0 && this.records.length >= this.students.length;
+    return this.students.length > 0 && this.students.every(s => this.pendingStatuses.has(s.id));
+  }
+
+  /** True when there are any pending statuses (fresh or edited) to save */
+  get hasPendingChanges(): boolean {
+    return this.pendingStatuses.size > 0;
   }
 
   getInitials(student: EnrolledStudent): string {
@@ -241,14 +195,62 @@ export class AttendanceComponent implements OnInit {
     return a?.assignedClass?.name || 'Class';
   }
 
-  isSaving(enrollmentId: string): boolean {
-    return this.saving.has(enrollmentId);
-  }
-
-  /** Enter edit mode to allow corrections */
+  /** Enter edit mode — pending statuses already seeded from records on load */
   enterEditMode(): void {
     this.editMode = true;
     this.cdr.detectChanges();
+  }
+
+  /** Discard local changes and exit edit mode */
+  cancelEdit(): void {
+    // Restore from saved records
+    this.pendingStatuses.clear();
+    for (const rec of this.records) {
+      this.pendingStatuses.set(rec.enrollment_id, rec.status);
+    }
+    this.editMode = false;
+    this.cdr.detectChanges();
+  }
+
+  /**
+   * Commit all pending statuses to the backend in one parallel batch.
+   * Used for both fresh attendance and edits.
+   * On success: show toast, redirect to /teacher/home.
+   */
+  onSave(): void {
+    if (this.isBulkSaving || !this.pendingStatuses.size) return;
+    this.isBulkSaving = true;
+    this.errorMessage = '';
+
+    const updates$ = Array.from(this.pendingStatuses.entries()).map(
+      ([enrollmentId, status]) =>
+        this.attendanceService.markAttendance({
+          enrollment_id: enrollmentId,
+          date: this.today,
+          status,
+        }),
+    );
+
+    forkJoin(updates$).subscribe({
+      next: (savedRecords) => {
+        // Sync saved records back
+        for (const rec of savedRecords) {
+          const idx = this.records.findIndex(r => r.enrollment_id === rec.enrollment_id);
+          if (idx >= 0) this.records[idx] = rec;
+          else this.records.push(rec);
+        }
+        this.editMode = false;
+        this.isBulkSaving = false;
+        this.successMessage = '✅ Attendance Saved';
+        this.cdr.detectChanges();
+        setTimeout(() => this.router.navigate(['/teacher/home']), 1200);
+      },
+      error: () => {
+        this.errorMessage = 'Failed to save. Please check your connection and try again.';
+        this.isBulkSaving = false;
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   /** Check if broadcast was already sent today for this class */
