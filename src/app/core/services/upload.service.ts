@@ -63,7 +63,9 @@ export class UploadService {
       const xhr = new XMLHttpRequest();
       xhr.open('PUT', signedUrl);
       xhr.setRequestHeader('Content-Type', file.type || 'image/jpeg');
-      xhr.setRequestHeader('x-upsert', 'false');
+      // Do NOT add x-upsert or other custom headers — signed upload URLs are
+      // self-contained. Custom headers trigger a CORS preflight OPTIONS request
+      // that Supabase's /object/upload/sign/ endpoint rejects → xhr.onerror.
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable && onProgress) {

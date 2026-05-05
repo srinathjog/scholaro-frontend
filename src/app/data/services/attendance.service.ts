@@ -93,6 +93,14 @@ export class AttendanceService {
     );
   }
 
+  /** Save a mixed-status batch in a single DB round-trip (replaces forkJoin of individual saves) */
+  saveAll(records: MarkAttendanceDto[]): Observable<AttendanceRecord[]> {
+    return this.http.post<AttendanceRecord[]>(
+      `${this.apiUrl}/attendance/save-all`,
+      { records },
+    );
+  }
+
   /** Bulk-mark attendance for multiple students at once */
   markBulkAttendance(dto: BulkAttendanceDto): Observable<AttendanceRecord[]> {
     return this.http.post<AttendanceRecord[]>(

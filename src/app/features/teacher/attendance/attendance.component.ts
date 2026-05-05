@@ -213,7 +213,7 @@ export class AttendanceComponent implements OnInit {
   }
 
   /**
-   * Commit all pending statuses to the backend in one parallel batch.
+   * Commit all pending statuses to the backend in ONE request (single DB upsert).
    * Used for both fresh attendance and edits.
    * On success: show toast, redirect to /teacher/home.
    */
@@ -222,18 +222,16 @@ export class AttendanceComponent implements OnInit {
     this.isBulkSaving = true;
     this.errorMessage = '';
 
-    const updates$ = Array.from(this.pendingStatuses.entries()).map(
-      ([enrollmentId, status]) =>
-        this.attendanceService.markAttendance({
-          enrollment_id: enrollmentId,
-          date: this.today,
-          status,
-        }),
+    const records = Array.from(this.pendingStatuses.entries()).map(
+      ([enrollmentId, status]) => ({
+        enrollment_id: enrollmentId,
+        date: this.today,
+        status,
+      }),
     );
 
-    forkJoin(updates$).subscribe({
+    this.attendanceService.saveAll(records).subscribe({
       next: (savedRecords) => {
-        // Sync saved records back
         for (const rec of savedRecords) {
           const idx = this.records.findIndex(r => r.enrollment_id === rec.enrollment_id);
           if (idx >= 0) this.records[idx] = rec;

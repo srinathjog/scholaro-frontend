@@ -16,8 +16,17 @@ import { SettingsService } from '../../data/services/settings.service';
     <header class="fixed top-0 inset-x-0 z-40 flex items-end justify-center pb-3 shadow-sm safe-area-top backdrop-blur-md"
             style="min-height: calc(4rem + env(safe-area-inset-top, 0px))"
             [style.background-color]="primaryColor ? primaryColor + 'E6' : 'rgba(99,102,241,0.9)'">
-      <span class="text-white font-bold text-sm tracking-wide truncate max-w-[220px] drop-shadow-sm"
-            [title]="schoolName">{{ schoolName || 'Scholaro' }}</span>
+      <div class="flex items-center gap-2 px-4 max-w-full">
+        <!-- School logo (circular) — shows only when logoUrl is available -->
+        <div *ngIf="logoUrl"
+             class="w-8 h-8 rounded-full overflow-hidden shrink-0 bg-white/20 flex items-center justify-center">
+          <img [src]="logoUrl" alt="logo"
+               class="w-full h-full object-contain"
+               (error)="logoUrl = null">
+        </div>
+        <span class="text-white font-bold text-sm tracking-wide drop-shadow-sm text-center leading-tight"
+              [title]="schoolName">{{ schoolName || 'Scholaro' }}</span>
+      </div>
     </header>
 
     <!-- iOS Push Notification Banner -->
@@ -142,6 +151,7 @@ export class ParentShellComponent implements OnInit {
   showNotifBanner = false;
   schoolName = '';
   primaryColor = '#4f46e5';
+  logoUrl: string | null = null;
 
   constructor(private authService: AuthService, private router: Router) {}
 
@@ -151,6 +161,7 @@ export class ParentShellComponent implements OnInit {
     this.settingsService.getBranding().subscribe({
       next: (b) => {
         if (b.primary_color) this.primaryColor = b.primary_color;
+        if (b.logo_url) this.logoUrl = b.logo_url;
         this.cdr.detectChanges();
       },
       error: () => {},

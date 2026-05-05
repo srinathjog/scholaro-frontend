@@ -6,6 +6,7 @@ import {
   BrandingSettings,
   UpdateBrandingPayload,
 } from '../../../data/services/settings.service';
+import { TenantService } from '../../../core/services/tenant.service';
 
 @Component({
   selector: 'app-branding',
@@ -27,6 +28,7 @@ export class BrandingComponent implements OnInit {
   contactPhone = '';
 
   private cdr = inject(ChangeDetectorRef);
+  private tenantService = inject(TenantService);
 
   constructor(private settingsService: SettingsService) {}
 
@@ -90,6 +92,8 @@ export class BrandingComponent implements OnInit {
         this.logoUrl = url;
         this.logoPreview = url;
         this.logoUploading = false;
+        // Push immediately so sidebar updates without a page reload
+        this.tenantService.updateLocalBranding({ logoUrl: url });
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -118,6 +122,11 @@ export class BrandingComponent implements OnInit {
       next: () => {
         this.saving = false;
         this.saved = true;
+        // Push to shared subject so all shells update immediately
+        this.tenantService.updateLocalBranding({
+          logoUrl: this.logoUrl,
+          primaryColor: this.primaryColor,
+        });
         this.cdr.detectChanges();
         setTimeout(() => {
           this.saved = false;
