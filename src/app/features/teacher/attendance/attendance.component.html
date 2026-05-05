@@ -163,7 +163,7 @@
       <span class="text-xl">✏️</span>
       <div>
         <p class="text-sm font-bold text-indigo-700">Editing Today's Attendance</p>
-        <p class="text-xs text-indigo-500 mt-0.5">Tap any student to update their status. Changes save instantly.</p>
+        <p class="text-xs text-indigo-500 mt-0.5">Tap a status to change it. Nothing saves until you tap <strong>Save Attendance</strong>.</p>
       </div>
     </div>
 
@@ -236,14 +236,11 @@
             </span>
           </div>
 
-          <!-- Saving spinner -->
-          <div *ngIf="isSaving(s.id)" class="shrink-0 pr-1">
-            <div class="w-7 h-7 border-2 border-gray-200 border-t-emerald-500 rounded-full animate-spin"></div>
-          </div>
+          <!-- Saving spinner removed — all changes are local until Save -->
 
           <!-- Two large buttons: Present / Absent -->
-          <div *ngIf="!isSaving(s.id)" class="flex gap-2 shrink-0">
-            <button (click)="markStudent(s.id, 'present')"
+          <div class="flex gap-2 shrink-0">
+            <button (click)="updateStatusLocally(s.id, 'present')"
                     class="flex flex-col items-center justify-center rounded-2xl transition-all
                            active:scale-90 min-w-[3.5rem] sm:min-w-[4.5rem] py-2 px-2 sm:px-3"
                     [ngClass]="getStatus(s.id) === 'present'
@@ -253,7 +250,7 @@
               <span class="text-xl sm:text-2xl leading-none">✅</span>
               <span class="text-[10px] sm:text-xs font-bold mt-1">Present</span>
             </button>
-            <button (click)="markStudent(s.id, 'absent')"
+            <button (click)="updateStatusLocally(s.id, 'absent')"
                     class="flex flex-col items-center justify-center rounded-2xl transition-all
                            active:scale-90 min-w-[3.5rem] sm:min-w-[4.5rem] py-2 px-2 sm:px-3"
                     [ngClass]="getStatus(s.id) === 'absent'
@@ -281,12 +278,46 @@
     </div><!-- /!showSummary -->
   </div>
 
+  <!-- ─── STICKY BOTTOM: SAVE ATTENDANCE BAR ─── -->
+  <!-- Shown whenever there are pending local changes (fresh mark or edit) -->
+  <div *ngIf="selectedClassId && !loading && hasPendingChanges && !showSummary"
+       class="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-lg border-t border-indigo-100 shadow-lg">
+    <div class="max-w-2xl mx-auto px-4 py-3 flex flex-col gap-2">
+      <button (click)="onSave()"
+              [disabled]="isBulkSaving"
+              class="w-full py-3.5 rounded-2xl text-white font-bold text-sm
+                     bg-gradient-to-r from-indigo-600 to-purple-600
+                     shadow-xl shadow-indigo-200/50
+                     hover:from-indigo-700 hover:to-purple-700
+                     active:scale-[0.98] transition-all
+                     disabled:opacity-60 disabled:cursor-not-allowed
+                     flex items-center justify-center gap-2">
+        <ng-container *ngIf="!isBulkSaving">
+          💾 Save Attendance
+        </ng-container>
+        <ng-container *ngIf="isBulkSaving">
+          <div class="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+          Saving…
+        </ng-container>
+      </button>
+      <button *ngIf="editMode" (click)="cancelEdit()"
+              [disabled]="isBulkSaving"
+              class="w-full py-2.5 rounded-2xl text-indigo-600 font-semibold text-sm
+                     bg-indigo-50 border border-indigo-200
+                     hover:bg-indigo-100 active:scale-[0.98] transition-all
+                     disabled:opacity-40 disabled:cursor-not-allowed">
+        Cancel
+      </button>
+    </div>
+  </div>
+
   <!-- ─── STICKY BOTTOM: BROADCAST BUTTON ─── -->
-  <div *ngIf="selectedClassId && !loading && allMarked && presentCount > 0 && !broadcastSent"
+  <!-- Shown after Save, when all are marked and parents haven't been notified yet -->
+  <div *ngIf="selectedClassId && !loading && allMarked && presentCount > 0 && !broadcastSent && !editMode && !hasPendingChanges"
        class="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-gray-100">
     <div class="max-w-2xl mx-auto px-4 py-3 flex flex-col gap-2">
       <button (click)="broadcastArrival()"
-              [disabled]="broadcasting || silentSaving"
+              [disabled]="broadcasting"
               class="w-full py-3.5 rounded-2xl text-white font-bold text-sm
                      bg-gradient-to-r from-emerald-500 to-teal-500
                      shadow-xl shadow-emerald-200/50
@@ -300,18 +331,12 @@
           Sending notifications…
         </span>
       </button>
-      <button (click)="saveAttendanceOnly()"
-              [disabled]="silentSaving || broadcasting"
-              class="w-full py-2.5 rounded-2xl text-gray-600 font-semibold text-sm
-                     bg-gray-100 border border-gray-200
-                     hover:bg-gray-200 active:scale-[0.98] transition-all
-                     disabled:opacity-60 disabled:cursor-not-allowed
-                     flex items-center justify-center gap-2">
-        💾 Save Changes (without notifying parents)
-      </button>
       <p class="text-center text-[11px] text-gray-400">
         Broadcast sends "[Child Name] has arrived safely at school! 🏫" to each present student's parents
       </p>
     </div>
   </div>
+
+  <!-- ─── STICKY BOTTOM: EDIT-MODE SAVE BAR ─── -->
+  <!-- Handled by the hasPendingChanges bar above; editMode shows same Save bar -->
 </div>
