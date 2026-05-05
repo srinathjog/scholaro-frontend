@@ -321,7 +321,7 @@ export class CreateActivityComponent implements OnInit {
 
         let slots: SignedUploadSlot[];
         try {
-          slots = await this.uploadService.getSignedUploadUrls(this.selectedFiles);
+          slots = await this.uploadService.getSignedUploadUrls(compressedFiles);
         } catch (e: any) {
           throw new Error(e?.message || 'Could not prepare upload. Please check your connection and try again.');
         }

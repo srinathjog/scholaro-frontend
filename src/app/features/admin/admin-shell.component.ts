@@ -1,9 +1,12 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router, NavigationEnd } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { SettingsService } from '../../data/services/settings.service';
+import { TenantService } from '../../core/services/tenant.service';
 import { filter } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-admin-shell',
@@ -22,10 +25,14 @@ import { filter } from 'rxjs/operators';
           </svg>
         </button>
         <div class="flex items-center gap-2">
-          <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-            <span class="text-sm text-white font-bold">{{ schoolInitial }}</span>
+          <!-- Logo or initial -->
+          <div class="w-8 h-8 rounded-lg overflow-hidden shrink-0 flex items-center justify-center bg-indigo-600">
+            <img *ngIf="logoUrl" [src]="logoUrl" alt="logo"
+                 class="w-full h-full object-contain"
+                 (error)="logoUrl = null">
+            <span *ngIf="!logoUrl" class="text-sm text-white font-bold">{{ schoolInitial }}</span>
           </div>
-          <span class="text-sm font-bold text-gray-900 truncate max-w-[140px]">{{ schoolDisplayName }}</span>
+          <span class="text-sm font-bold text-gray-900 truncate max-w-[160px]">{{ schoolName || 'Scholaro' }}</span>
         </div>
       </header>
 
@@ -48,11 +55,15 @@ import { filter } from 'rxjs/operators';
         <!-- Logo -->
         <div class="px-5 py-5 border-b border-gray-100">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 bg-indigo-600 rounded-full flex items-center justify-center shrink-0">
-              <span class="text-base text-white font-bold">{{ schoolInitial }}</span>
+            <!-- School logo or colour-initial circle -->
+            <div class="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-indigo-600">
+              <img *ngIf="logoUrl" [src]="logoUrl" alt="logo"
+                   class="w-full h-full object-contain"
+                   (error)="logoUrl = null">
+              <span *ngIf="!logoUrl" class="text-base text-white font-bold">{{ schoolInitial }}</span>
             </div>
             <div class="min-w-0">
-              <p class="text-sm font-bold text-gray-900 truncate" [title]="schoolName">{{ schoolDisplayName }}</p>
+              <p class="text-sm font-bold text-gray-900 whitespace-normal break-words leading-tight" [title]="schoolName">{{ schoolName || 'Scholaro' }}</p>
               <ng-container *ngIf="authService.currentUser$ | async as user">
                 <span
                   class="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-0.5"
@@ -259,16 +270,20 @@ import { filter } from 'rxjs/operators';
     }
   `],
 })
-export class AdminShellComponent {
+export class AdminShellComponent implements OnInit, OnDestroy {
   sidebarOpen = false;
   schoolName = '';
+  logoUrl: string | null = null;
+  private brandingSub?: Subscription;
 
   constructor(
     public authService: AuthService,
     private router: Router,
+    private settingsService: SettingsService,
+    private tenantService: TenantService,
+    private cdr: ChangeDetectorRef,
   ) {
     this.schoolName = this.authService.getSchoolName();
-    // Auto-close sidebar on navigation (mobile)
     this.router.events.pipe(
       filter(e => e instanceof NavigationEnd),
     ).subscribe(() => {
@@ -276,9 +291,28 @@ export class AdminShellComponent {
     });
   }
 
-  get schoolDisplayName(): string {
-    const name = this.schoolName || 'Scholaro';
-    return name.length > 15 ? name.split(' ')[0] : name;
+  ngOnInit(): void {
+    // Load branding on startup and push to shared subject
+    this.settingsService.getBranding().subscribe({
+      next: (b) => {
+        this.logoUrl = b.logo_url;
+        this.tenantService.updateLocalBranding({
+          logoUrl: b.logo_url,
+          primaryColor: b.primary_color,
+        });
+        this.cdr.detectChanges();
+      },
+      error: () => {},
+    });
+    // React to branding changes (e.g., logo uploaded in Settings)
+    this.brandingSub = this.tenantService.branding$.subscribe(b => {
+      this.logoUrl = b.logoUrl;
+      this.cdr.detectChanges();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.brandingSub?.unsubscribe();
   }
 
   get schoolInitial(): string {
