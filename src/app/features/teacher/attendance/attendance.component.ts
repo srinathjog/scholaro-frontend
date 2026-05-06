@@ -242,7 +242,7 @@ export class AttendanceComponent implements OnInit {
         this.isBulkSaving = false;
         this.showSuccessOverlay = true;
         this.cdr.detectChanges();
-        setTimeout(() => this.router.navigate(['/teacher/home']), 1500);
+        setTimeout(() => this.router.navigate(['/teacher/history']), 1500);
       },
       error: () => {
         this.errorMessage = 'Failed to save. Please check your connection and try again.';

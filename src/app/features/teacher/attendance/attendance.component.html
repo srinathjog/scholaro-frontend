@@ -42,11 +42,11 @@
 
   <!-- ─── FULL-SCREEN SUCCESS OVERLAY ─── -->
   <div *ngIf="showSuccessOverlay"
-       class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-emerald-600/90 backdrop-blur-sm">
+       class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/20 backdrop-blur-md">
     <div class="flex flex-col items-center gap-5 animate-bounce">
-      <span class="text-8xl">✅</span>
+      <span class="text-2xl">✅</span>
       <p class="text-3xl font-extrabold text-white tracking-tight">Attendance Saved</p>
-      <p class="text-emerald-100 text-sm font-medium">Redirecting to home…</p>
+      <p class="text-white/70 text-sm font-medium">Redirecting…</p>
     </div>
   </div>
 
@@ -286,7 +286,7 @@
 
   <!-- ─── STICKY BOTTOM: SAVE ATTENDANCE BAR ─── -->
   <!-- Shown whenever there are pending local changes (fresh mark or edit) -->
-  <div *ngIf="selectedClassId && !loading && hasPendingChanges && !showSummary"
+  <div *ngIf="selectedClassId && !loading && hasPendingChanges && !showSummary && !showSuccessOverlay"
        class="fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-lg border-t border-indigo-100 shadow-lg">
     <div class="max-w-2xl mx-auto px-4 py-3 flex flex-col gap-2">
       <button (click)="onSave()"
