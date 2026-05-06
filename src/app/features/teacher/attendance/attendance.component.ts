@@ -44,6 +44,7 @@ export class AttendanceComponent implements OnInit {
   editMode = false;
   broadcastSent = false;
   isBulkSaving = false;
+  showSuccessOverlay = false;
 
   /**
    * All status changes live here first — nothing hits the DB until onSave().
@@ -239,9 +240,9 @@ export class AttendanceComponent implements OnInit {
         }
         this.editMode = false;
         this.isBulkSaving = false;
-        this.successMessage = '✅ Attendance Saved';
+        this.showSuccessOverlay = true;
         this.cdr.detectChanges();
-        setTimeout(() => this.router.navigate(['/teacher/home']), 1200);
+        setTimeout(() => this.router.navigate(['/teacher/history']), 1500);
       },
       error: () => {
         this.errorMessage = 'Failed to save. Please check your connection and try again.';
