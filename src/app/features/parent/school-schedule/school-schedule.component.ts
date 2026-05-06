@@ -41,7 +41,7 @@ export interface CalendarCell {
 export class SchoolScheduleComponent implements OnInit {
 
   // ── Tab state ──────────────────────────────────────────────────────────────
-  activeTab: 'events' | 'attendance' | 'planner' = 'events';
+  activeTab: 'events' | 'attendance' | 'syllabus' = 'events';
 
   // ── Child selector ─────────────────────────────────────────────────────────
   children: ParentChild[] = [];
@@ -56,13 +56,13 @@ export class SchoolScheduleComponent implements OnInit {
   calendarView: 'grid' | 'list' = 'grid';
   calendarYear = new Date().getFullYear();
   calendarMonth = new Date().getMonth(); // 0-indexed
-  selectedCalendarDate: string | null = null;
+  selectedCalendarDate: string | null = new Date().toISOString().slice(0, 10); // default = today
   // ── Attendance tab ─────────────────────────────────────────────────────────
   attendanceRecords: AttendanceRecord[] = [];
   loadingAttendance = false;
   attendanceError = '';
 
-  // ── Planner tab ────────────────────────────────────────────────────────────
+  // ── Planner tab (now Syllabus) ─────────────────────────────────────────────
   documents: SchoolDocument[] = [];
   loadingDocuments = false;
   documentsError = '';
@@ -97,7 +97,7 @@ export class SchoolScheduleComponent implements OnInit {
 
   // ── Tab switching ──────────────────────────────────────────────────────────
 
-  switchTab(tabName: 'events' | 'attendance' | 'planner'): void {
+  switchTab(tabName: 'events' | 'attendance' | 'syllabus'): void {
     if (this.activeTab === tabName) return;
     this.activeTab = tabName;
 
@@ -112,7 +112,7 @@ export class SchoolScheduleComponent implements OnInit {
       }
     }
 
-    if (tabName === 'planner' && this.documents.length === 0 && !this.loadingDocuments) {
+    if (tabName === 'syllabus' && this.documents.length === 0 && !this.loadingDocuments) {
       this.loadDocuments();
     }
 
@@ -196,6 +196,14 @@ export class SchoolScheduleComponent implements OnInit {
     else this.calendarMonth++;
     this.selectedCalendarDate = null;
     this.cdr.markForCheck();
+  }
+
+  /** Events that fall in the currently visible calendar month (for the list below the grid) */
+  get eventsThisMonth(): SchoolEvent[] {
+    const mm = String(this.calendarMonth + 1).padStart(2, '0');
+    const prefix = `${this.calendarYear}-${mm}-`;
+    return this.events.filter(e => e.event_date.startsWith(prefix))
+      .sort((a, b) => a.event_date.localeCompare(b.event_date));
   }
 
   selectCalendarDate(dateStr: string | null): void {

@@ -75,6 +75,11 @@ export interface MonthlyAttendanceSummary {
   presentCount: number;
   absentCount: number;
   percentage: number;
+  joiningYear: string;
+  joiningClass: string;
+  parentName: string;
+  parentPhone: string;
+  parentEmail: string;
 }
 
 @Injectable({ providedIn: 'root' })

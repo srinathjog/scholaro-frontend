@@ -51,11 +51,11 @@ import { Subscription } from 'rxjs';
 
         <div class="px-5 py-5 border-b border-gray-100">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-teal-600">
+            <div class="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-white border border-gray-200">
               <img *ngIf="logoUrl" [src]="logoUrl" alt="logo"
                    class="w-full h-full object-contain"
                    (error)="logoUrl = null">
-              <span *ngIf="!logoUrl" class="text-base text-white font-bold">{{ schoolInitial }}</span>
+              <span *ngIf="!logoUrl" class="text-base text-gray-600 font-bold">{{ schoolInitial }}</span>
             </div>
             <div class="min-w-0">
               <p class="text-sm font-bold text-gray-900 whitespace-normal break-words leading-tight" [title]="schoolName">{{ schoolName || 'Scholaro' }}</p>
@@ -84,14 +84,6 @@ import { Subscription } from 'rxjs';
               <path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
             </svg>
             Posts
-          </a>
-          <a routerLink="/teacher/create" routerLinkActive="bg-teal-50 text-teal-700"
-             (click)="onNavClick()"
-             class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-            <svg class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            New Post
           </a>
           <a routerLink="/teacher/logs" routerLinkActive="bg-teal-50 text-teal-700"
              (click)="onNavClick()"

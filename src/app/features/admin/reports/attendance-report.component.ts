@@ -11,6 +11,11 @@ export interface MonthlyAttendanceSummary {
   presentCount: number;
   absentCount: number;
   percentage: number;
+  joiningYear: string;
+  joiningClass: string;
+  parentName: string;
+  parentPhone: string;
+  parentEmail: string;
 }
 
 @Component({
@@ -74,6 +79,11 @@ export interface MonthlyAttendanceSummary {
             <thead class="bg-slate-50">
               <tr>
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600">Student Name</th>
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">Joining Class</th>
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">Joining Year</th>
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">Parent Name</th>
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">Parent Phone</th>
+                <th class="px-4 py-3 text-sm font-semibold text-slate-600">Parent Email</th>
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600">Days Present</th>
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600">Days Absent</th>
                 <th class="px-4 py-3 text-sm font-semibold text-slate-600">% Score</th>
@@ -82,12 +92,17 @@ export interface MonthlyAttendanceSummary {
             <tbody class="divide-y divide-slate-200 bg-white">
               <tr *ngFor="let row of reportData" class="hover:bg-slate-50">
                 <td class="px-4 py-4 text-sm text-slate-900">{{ row.studentName }}</td>
+                <td class="px-4 py-4 text-sm text-slate-900">{{ row.joiningClass }}</td>
+                <td class="px-4 py-4 text-sm text-slate-900">{{ row.joiningYear }}</td>
+                <td class="px-4 py-4 text-sm text-slate-900">{{ row.parentName }}</td>
+                <td class="px-4 py-4 text-sm text-slate-900">{{ row.parentPhone }}</td>
+                <td class="px-4 py-4 text-sm text-slate-900">{{ row.parentEmail }}</td>
                 <td class="px-4 py-4 text-sm text-slate-900">{{ row.presentCount }}</td>
                 <td class="px-4 py-4 text-sm text-slate-900">{{ row.absentCount }}</td>
                 <td class="px-4 py-4 text-sm font-semibold text-slate-900">{{ row.percentage }}%</td>
               </tr>
               <tr *ngIf="!reportData.length">
-                <td colspan="4" class="px-4 py-10 text-center text-sm text-slate-500">Select a class and month to view attendance summary.</td>
+                <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-500">Select a class and month to view attendance summary.</td>
               </tr>
             </tbody>
           </table>
@@ -155,6 +170,11 @@ export class AttendanceReportComponent implements OnInit {
     const worksheet = XLSX.utils.json_to_sheet(
       this.reportData.map((row) => ({
         'Student Name': row.studentName,
+        'Joining Class': row.joiningClass,
+        'Joining Year': row.joiningYear,
+        'Parent Name': row.parentName,
+        'Parent Phone': row.parentPhone,
+        'Parent Email': row.parentEmail,
         'Days Present': row.presentCount,
         'Days Absent': row.absentCount,
         'Attendance %': `${row.percentage}%`,

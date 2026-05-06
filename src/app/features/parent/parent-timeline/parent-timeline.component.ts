@@ -51,67 +51,71 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     if (!activity.media || !activity.media.length) return;
     const activityId = activity.id || (activity.created_at + '_' + (activity.title || ''));
     this.bulkDownloadLoading[activityId] = true;
-    const JSZip = (await import('jszip')).default;
-    // @ts-ignore
-    const { saveAs } = await import('file-saver');
-    const zip = new JSZip();
-    let idx = 1;
-    for (const m of activity.media) {
-      try {
-        const blob = await this.http.get(m.media_url, { responseType: 'blob' }).toPromise();
-        if (blob) {
-          const ext = m.media_url.split('.').pop()?.split('?')[0] || 'jpg';
-          zip.file(`photo_${idx}.${ext}`, blob);
-          idx++;
-        }
-      } catch (e) {
-        // skip failed image
-      }
-    }
-    const childName = (this.selectedChild?.first_name || 'Child').replace(/\s+/g, '');
-    const title = (activity.title || 'Activity').replace(/[^a-zA-Z0-9]+/g, '_');
-    const date = (activity.created_at || '').slice(0, 10);
-    const zipName = `${childName}_${title}_${date}.zip`;
-    const content = await zip.generateAsync({ type: 'blob' });
-    saveAs(content, zipName);
-    this.bulkDownloadLoading[activityId] = false;
     this.cdr.detectChanges();
+    try {
+      const JSZip = (await import('jszip')).default;
+      // @ts-ignore
+      const { saveAs } = await import('file-saver');
+      const zip = new JSZip();
+      let idx = 1;
+      for (const m of activity.media) {
+        try {
+          console.log(`[ZIP] fetching photo ${idx}:`, m.media_url);
+          const blob = await this.http.get(m.media_url, { responseType: 'blob' }).toPromise();
+          if (blob) {
+            const ext = m.media_url.split('.').pop()?.split('?')[0] || 'jpg';
+            zip.file(`photo_${idx}.${ext}`, blob);
+            console.log(`[ZIP] added photo ${idx} (${blob.size} bytes)`);
+            idx++;
+          }
+        } catch (e) {
+          console.warn(`[ZIP] skipping photo (CORS or network error):`, m.media_url, e);
+        }
+      }
+      if (idx === 1) {
+        alert('Could not download photos. They may not be accessible due to browser security restrictions.');
+        return;
+      }
+      console.log('[ZIP] generating archive…');
+      const content = await zip.generateAsync({ type: 'blob' });
+      const childName = (this.selectedChild?.first_name || 'Child').replace(/\s+/g, '');
+      const title = (activity.title || 'Activity').replace(/[^a-zA-Z0-9]+/g, '_');
+      const date = (activity.created_at || '').slice(0, 10);
+      const zipName = `${childName}_${title}_${date}.zip`;
+      saveAs(content, zipName);
+      console.log('[ZIP] saved:', zipName);
+    } catch (err) {
+      console.error('[ZIP] unexpected error:', err);
+      alert('Failed to prepare ZIP. Please try downloading photos individually.');
+    } finally {
+      this.bulkDownloadLoading[activityId] = false;
+      this.cdr.detectChanges();
+    }
   }
 
-  /** Share the whole post (text + all images) */
+  /** Share a post as text + photo link (Web Share API v1 — works on all platforms) */
   async sharePost(item: any): Promise<void> {
     const schoolName = this.auth.getSchoolName() || 'School';
+    const title = `${schoolName} — Classroom Update`;
+    const rawTitle = this.formatActivityTitle(item).replace(/<[^>]+>/g, '');
+    const description = item.description ? '\n' + item.description : '';
+    const photoLink = item.media?.length ? '\n📸 ' + item.media[0].media_url : '';
+    const shareText = `${rawTitle}${description}${photoLink}`;
+
     try {
-      const shareText = this.formatActivityTitle(item).replace(/<[^>]+>/g, '') + (item.description ? '\n' + item.description : '');
-      const files: File[] = [];
-      if (item.media && item.media.length) {
-        for (const m of item.media) {
-          const response = await fetch(m.media_url);
-          const blob = await response.blob();
-          files.push(new File([blob], 'Scholaro_Moment.jpg', { type: blob.type }));
-        }
-      }
-      if ((navigator as any).canShare && (navigator as any).canShare({ files })) {
-        await (navigator as any).share({
-          files,
-          title: `${schoolName} — Classroom Update`,
-          text: shareText
-        });
+      if ((navigator as any).share) {
+        await (navigator as any).share({ title, text: shareText });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(shareText);
+        alert('Post copied to clipboard!');
       } else {
-        // Fallback: open first image in new tab, copy text
-        if (item.media && item.media.length) {
-          window.open(item.media[0].media_url, '_blank');
-        }
-        // Optionally, copy text to clipboard
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(shareText);
-          alert('Post text copied to clipboard!');
-        }
+        // Last resort: open first photo in new tab
+        if (item.media?.length) window.open(item.media[0].media_url, '_blank');
       }
-    } catch (err) {
-      // Fallback: open first image in new tab
-      if (item.media && item.media.length) {
-        window.open(item.media[0].media_url, '_blank');
+    } catch (err: any) {
+      // User cancelled share — no-op
+      if (err?.name !== 'AbortError') {
+        console.warn('[Share] failed:', err);
       }
     }
   }
