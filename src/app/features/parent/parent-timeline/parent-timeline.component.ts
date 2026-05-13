@@ -237,6 +237,17 @@ export class ParentTimelineComponent implements OnInit, OnDestroy, AfterViewInit
     }
   }
 
+  lightboxJumpTo(index: number): void {
+    if (index === this.lightboxIndex || !this.lightboxImageVisible) return;
+    this.lightboxImageVisible = false;
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.lightboxIndex = index;
+      this.lightboxImageVisible = true;
+      this.cdr.detectChanges();
+    }, 160);
+  }
+
   /** Fetch the image and trigger a browser Save-As download for that specific photo. */
   async downloadSpecificImage(url: string): Promise<void> {
     try {

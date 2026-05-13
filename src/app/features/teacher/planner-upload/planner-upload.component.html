@@ -1,0 +1,153 @@
+<div class="min-h-screen bg-gray-50 px-4 py-6 pb-24 max-w-lg mx-auto">
+
+  <!-- Header -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Monthly Planner</h1>
+    <p class="text-sm text-gray-500 mt-1">Upload the planner for your class so parents can view it in the app.</p>
+  </div>
+
+  <!-- Loading assignments -->
+  <div *ngIf="loadingAssignments" class="flex items-center justify-center py-20">
+    <div class="w-8 h-8 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin"></div>
+  </div>
+
+  <ng-container *ngIf="!loadingAssignments">
+
+    <!-- No class assigned -->
+    <div *ngIf="assignments.length === 0"
+         class="rounded-2xl bg-amber-50 border border-amber-200 px-5 py-6 text-center">
+      <p class="text-2xl mb-2">📋</p>
+      <p class="font-semibold text-amber-800 text-sm">No class assigned</p>
+      <p class="text-amber-600 text-xs mt-1">Ask your admin to assign you to a class first.</p>
+    </div>
+
+    <!-- Upload form -->
+    <form *ngIf="assignments.length > 0" (ngSubmit)="submit()" class="space-y-4">
+
+      <!-- Class selector (hidden if only one) -->
+      <div *ngIf="assignments.length > 1">
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Class</label>
+        <select [(ngModel)]="selectedClassId" name="classId"
+                (change)="onClassChange()"
+                class="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm
+                       text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <option value="">Select class…</option>
+          <option *ngFor="let a of assignments" [value]="a.class_id">
+            {{ a.assignedClass?.name }}{{ a.section?.name ? ' — ' + a.section?.name : '' }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Single class banner -->
+      <div *ngIf="assignments.length === 1"
+           class="flex items-center gap-3 bg-teal-50 border border-teal-200 rounded-xl px-4 py-3">
+        <span class="text-xl">🏫</span>
+        <p class="text-sm font-semibold text-teal-800">{{ classLabel }}</p>
+      </div>
+
+      <!-- Month + Year -->
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Month</label>
+          <select [(ngModel)]="selectedMonth" name="month"
+                  (change)="onMonthYearChange()"
+                  class="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm
+                         text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <option *ngFor="let m of months" [value]="m">{{ m }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-1.5">Year</label>
+          <select [(ngModel)]="selectedYear" name="year"
+                  (change)="onMonthYearChange()"
+                  class="w-full rounded-xl border border-gray-200 bg-white px-3 py-3 text-sm
+                         text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <option *ngFor="let y of years" [value]="y">{{ y }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Existing planner notice -->
+      <div *ngIf="!checkingExisting && existingPlanner"
+           class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5">
+        <span class="text-xl shrink-0">⚠️</span>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-amber-800">Planner already uploaded</p>
+          <p class="text-xs text-amber-600 mt-0.5">Uploading a new file will replace the current one for {{ selectedMonth }}.</p>
+          <a [href]="existingPlanner.file_url" target="_blank" rel="noopener noreferrer"
+             class="inline-block mt-2 text-xs font-semibold text-teal-600 underline underline-offset-2">
+            View current planner ↗
+          </a>
+        </div>
+        <button type="button" (click)="deleteExisting()"
+                class="shrink-0 text-xs text-red-500 font-semibold hover:text-red-700 transition-colors">
+          Delete
+        </button>
+      </div>
+
+      <!-- File picker -->
+      <div>
+        <label class="block text-sm font-semibold text-gray-700 mb-1.5">File</label>
+        <label class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed
+                      border-gray-300 rounded-xl bg-white cursor-pointer hover:border-teal-400
+                      hover:bg-teal-50/40 transition-all group">
+          <input type="file" class="hidden" accept=".pdf,image/jpeg,image/png,image/webp"
+                 (change)="onFileChange($event)" />
+
+          <ng-container *ngIf="!selectedFile">
+            <svg class="w-8 h-8 text-gray-400 group-hover:text-teal-500 mb-2 transition-colors"
+                 fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p class="text-sm text-gray-500">Tap to pick a PDF or photo</p>
+            <p class="text-xs text-gray-400 mt-0.5">PDF ≤ 5 MB · Images auto-compressed</p>
+          </ng-container>
+
+          <ng-container *ngIf="selectedFile">
+            <span class="text-3xl mb-1">{{ selectedFile.type === 'application/pdf' ? '📕' : '🖼️' }}</span>
+            <p class="text-sm font-semibold text-gray-800 px-4 text-center truncate w-full">{{ selectedFile.name }}</p>
+            <p class="text-xs text-teal-600 mt-0.5">Tap to change</p>
+          </ng-container>
+        </label>
+
+        <p *ngIf="fileError" class="text-xs text-red-600 mt-1.5">{{ fileError }}</p>
+      </div>
+
+      <!-- Success -->
+      <div *ngIf="successMessage"
+           class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3.5">
+        <span class="text-xl">✅</span>
+        <p class="text-sm font-semibold text-emerald-800">{{ successMessage }}</p>
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="errorMessage"
+           class="rounded-xl bg-red-50 border border-red-200 px-4 py-3.5">
+        <p class="text-sm text-red-700">{{ errorMessage }}</p>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit"
+              [disabled]="!selectedClassId || !selectedFile || uploading"
+              class="w-full py-3.5 rounded-xl font-bold text-sm text-white transition-all
+                     bg-gradient-to-r from-teal-600 to-emerald-600
+                     hover:from-teal-700 hover:to-emerald-700
+                     shadow-md hover:shadow-lg
+                     disabled:opacity-50 disabled:cursor-not-allowed">
+        <span *ngIf="!uploading">
+          {{ existingPlanner ? 'Replace Planner' : 'Upload Planner' }}
+        </span>
+        <span *ngIf="uploading" class="flex items-center justify-center gap-2">
+          <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          Uploading…
+        </span>
+      </button>
+
+    </form>
+  </ng-container>
+
+</div>

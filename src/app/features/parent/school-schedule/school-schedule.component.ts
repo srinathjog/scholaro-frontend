@@ -2,10 +2,16 @@ import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ParentService, ParentChild } from '../../../data/services/parent.service';
 import { AttendanceService, AttendanceRecord } from '../../../data/services/attendance.service';
-import { SchoolDocumentsService, SchoolDocument } from '../../../data/services/school-documents.service';
+import { PlannerService, ClassPlanner } from '../../../data/services/planner.service';
 import { environment } from '../../../../environments/environment';
+
+const MONTH_NAMES = [
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
+];
 
 // ── Local DTOs ────────────────────────────────────────────────────────────────
 
@@ -63,16 +69,25 @@ export class SchoolScheduleComponent implements OnInit {
   attendanceError = '';
 
   // ── Planner tab (now Syllabus) ─────────────────────────────────────────────
-  documents: SchoolDocument[] = [];
-  loadingDocuments = false;
-  documentsError = '';
+  currentPlanner: ClassPlanner | null = null;
+  loadingPlanner = false;
+  plannerError = '';
+  /** Month name shown in the syllabus tab (current calendar month). */
+  readonly plannerMonth = MONTH_NAMES[new Date().getMonth()];
+  readonly plannerYear = new Date().getFullYear();
+
+  get plannerPdfUrl(): SafeResourceUrl | null {
+    if (!this.currentPlanner || this.currentPlanner.file_type !== 'pdf') return null;
+    return this.sanitizer.bypassSecurityTrustResourceUrl(this.currentPlanner.file_url);
+  }
 
   constructor(
     private readonly parentService: ParentService,
     private readonly attendanceService: AttendanceService,
-    private readonly documentsService: SchoolDocumentsService,
+    private readonly plannerService: PlannerService,
     private readonly http: HttpClient,
     private readonly cdr: ChangeDetectorRef,
+    private readonly sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -112,8 +127,8 @@ export class SchoolScheduleComponent implements OnInit {
       }
     }
 
-    if (tabName === 'syllabus' && this.documents.length === 0 && !this.loadingDocuments) {
-      this.loadDocuments();
+    if (tabName === 'syllabus' && !this.currentPlanner && !this.loadingPlanner && !this.plannerError) {
+      this.loadPlanner();
     }
 
     this.cdr.markForCheck();
@@ -126,6 +141,9 @@ export class SchoolScheduleComponent implements OnInit {
     // Reset attendance cache so fresh data is fetched for the new child
     this.attendanceRecords = [];
     this.attendanceError = '';
+    // Reset planner so it is re-fetched for the new child's class
+    this.currentPlanner = null;
+    this.plannerError = '';
 
     // Always eager-load attendance so calendar grid dots are populated
     const enrollmentId = this.selectedChild?.enrollments?.[0]?.id;
@@ -357,18 +375,21 @@ export class SchoolScheduleComponent implements OnInit {
     return total === 0 ? 0 : Math.round((present / total) * 100);
   }
 
-  private loadDocuments(): void {
-    this.loadingDocuments = true;
-    this.documentsError = '';
-    this.documentsService.getDocuments().subscribe({
-      next: (docs) => {
-        this.documents = docs;
-        this.loadingDocuments = false;
+  private loadPlanner(): void {
+    const classId = this.selectedChild?.enrollments?.[0]?.class_id;
+    if (!classId) return;
+
+    this.loadingPlanner = true;
+    this.plannerError = '';
+    this.plannerService.getForClass(classId, this.plannerMonth, this.plannerYear).subscribe({
+      next: (planner) => {
+        this.currentPlanner = planner;
+        this.loadingPlanner = false;
         this.cdr.markForCheck();
       },
       error: () => {
-        this.documentsError = 'Could not load documents. Please try again.';
-        this.loadingDocuments = false;
+        this.plannerError = 'Could not load planner. Please try again.';
+        this.loadingPlanner = false;
         this.cdr.markForCheck();
       },
     });

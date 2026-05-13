@@ -319,9 +319,32 @@
     <!-- Full-size image -->
     <img [src]="selectedImageUrl"
          alt="Full size photo"
-         class="max-h-[75vh] max-w-full rounded-xl shadow-2xl object-contain
+         class="max-h-[70vh] max-w-full rounded-xl shadow-2xl object-contain
                 transition-opacity duration-[160ms] ease-in-out"
          [class.opacity-0]="!lightboxImageVisible" />
+
+    <!-- Thumbnail strip — only when multiple photos exist -->
+    <div *ngIf="lightboxImages.length > 1"
+         class="flex gap-2 overflow-x-auto mt-3 pb-1 max-w-[min(85vw,420px)]
+                bg-black/30 backdrop-blur-md rounded-xl px-2 py-2
+                [&::-webkit-scrollbar]:h-1.5
+                [&::-webkit-scrollbar-track]:bg-black/40
+                [&::-webkit-scrollbar-track]:rounded-full
+                [&::-webkit-scrollbar-thumb]:bg-white/20
+                [&::-webkit-scrollbar-thumb]:rounded-full"
+         (click)="$event.stopPropagation()">
+      <button *ngFor="let img of lightboxImages; let i = index"
+              type="button"
+              (click)="lightboxJumpTo(i)"
+              class="shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all duration-200"
+              [class.border-white]="i === lightboxIndex"
+              [class.opacity-100]="i === lightboxIndex"
+              [class.scale-105]="i === lightboxIndex"
+              [class.border-white/30]="i !== lightboxIndex"
+              [class.opacity-50]="i !== lightboxIndex">
+        <img [src]="img" alt="Thumbnail" class="w-full h-full object-cover" />
+      </button>
+    </div>
 
     <!-- Counter -->
     <div *ngIf="lightboxImages.length > 1"

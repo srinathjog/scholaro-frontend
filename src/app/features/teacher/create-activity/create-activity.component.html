@@ -327,14 +327,14 @@
         </div>
 
         <div class="flex items-center justify-between mt-2.5">
-          <!-- Counter: turns red + bold when at the limit -->
+          <!-- Counter: shows total (existing + new), turns red at limit -->
           <p class="text-xs font-semibold transition-colors"
-             [ngClass]="selectedFiles.length >= MAX_MEDIA ? 'text-red-500' : 'text-gray-400'">
-            {{ selectedFiles.length }} / {{ MAX_MEDIA }}
-            {{ selectedFiles.length >= MAX_MEDIA ? '— limit reached' : (selectedFiles.length !== 1 ? 'files' : 'file') + ' selected' }}
+             [ngClass]="(existingMediaUrls.length + selectedFiles.length) >= MAX_MEDIA ? 'text-red-500' : 'text-gray-400'">
+            {{ existingMediaUrls.length + selectedFiles.length }} / {{ MAX_MEDIA }}
+            {{ (existingMediaUrls.length + selectedFiles.length) >= MAX_MEDIA ? '— limit reached' : 'photos' }}
           </p>
           <!-- Hide Add More when at the limit -->
-          <label *ngIf="selectedFiles.length < MAX_MEDIA"
+          <label *ngIf="(existingMediaUrls.length + selectedFiles.length) < MAX_MEDIA"
                  class="flex items-center gap-1.5 cursor-pointer text-indigo-600 hover:text-indigo-700 text-xs font-medium transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -342,16 +342,27 @@
             <span>Add more</span>
             <input type="file" multiple accept="image/*" (change)="onFilesSelected($event)" class="hidden" />
           </label>
-          <span *ngIf="selectedFiles.length >= MAX_MEDIA"
+          <span *ngIf="(existingMediaUrls.length + selectedFiles.length) >= MAX_MEDIA"
                 class="text-xs text-red-400 font-medium">Max reached</span>
         </div>
       </div>
 
-      <!-- Current Photos (Edit Mode) -->
-      <div *ngIf="isEditMode && previews.length" class="px-6 pb-2">
-        <label class="block text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Current Photos</label>
-        <div class="flex gap-2 flex-wrap">
-          <img *ngFor="let url of previews" [src]="url" alt="Current photo" class="w-20 h-20 object-cover rounded-lg border border-gray-200" />
+      <!-- Edit Mode: All Photos Strip (scrollable, each with individual delete) -->
+      <div *ngIf="isEditMode && previews.length > 4" class="px-6 pb-3">
+        <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">All {{ previews.length }} Photos — tap ✕ to remove</p>
+        <div class="flex gap-2 overflow-x-auto pb-1">
+          <div *ngFor="let url of previews; let i = index"
+               class="relative shrink-0 group">
+            <img [src]="url" alt="Photo" class="w-20 h-20 object-cover rounded-xl border border-gray-200" />
+            <button type="button" (click)="removeMedia(i)"
+                    class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white
+                           rounded-full flex items-center justify-center shadow
+                           opacity-100 hover:bg-red-600 transition-all">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
