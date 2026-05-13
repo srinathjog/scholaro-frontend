@@ -163,4 +163,15 @@ export class TeacherFeedComponent implements OnInit {
       }, 160);
     }
   }
+
+  lightboxJumpTo(index: number): void {
+    if (index === this.lightboxIndex || !this.lightboxImageVisible) return;
+    this.lightboxImageVisible = false;
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.lightboxIndex = index;
+      this.lightboxImageVisible = true;
+      this.cdr.detectChanges();
+    }, 160);
+  }
 }

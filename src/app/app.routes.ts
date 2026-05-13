@@ -193,6 +193,11 @@ export const routes: Routes = [
 				loadComponent: () => import('./features/teacher/pickup/pickup.component').then(m => m.PickupComponent),
 				title: 'Secure Pickup',
 			},
+			{
+				path: 'planner',
+				loadComponent: () => import('./features/teacher/planner-upload/planner-upload.component').then(m => m.PlannerUploadComponent),
+				title: 'Monthly Planner',
+			},
 		],
 	},
 	{
