@@ -235,7 +235,8 @@
                 <span class="w-1.5 h-1.5 rounded-full" [ngClass]="getStatusConfig(item).dot"></span>
                 {{ getStatusConfig(item).label }}
               </span>
-              <span class="text-[10px] text-gray-400 font-medium text-right">
+              <span *ngIf="item.is_present === undefined || item.activity_type === 'notice'"
+                    class="text-[10px] text-gray-400 font-medium text-right">
                 {{ item.created_at | timeAgo }}
               </span>
             </div>
@@ -448,7 +449,7 @@
                    'text-emerald-500': item.security_event === 'check_out'
                  }">
                 <span *ngIf="item.security_event === 'check_in'">
-                  Arrival · {{ item.check_in_time | date:'shortTime' }}
+                  Arrival
                   <span *ngIf="item.status === 'late'" class="ml-1 text-amber-500 font-bold">⏰ Late</span>
                 </span>
                 <span *ngIf="item.security_event === 'check_out'">

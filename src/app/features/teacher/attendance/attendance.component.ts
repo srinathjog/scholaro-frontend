@@ -33,6 +33,8 @@ export class AttendanceComponent implements OnInit {
 
   selectedClassId = '';
   today = todayLocal();
+  /** The date being viewed/edited — defaults to today, but can be changed via the date picker. */
+  selectedDate = todayLocal();
 
   loading = false;
   broadcasting = false;
@@ -52,9 +54,12 @@ export class AttendanceComponent implements OnInit {
    */
   pendingStatuses = new Map<string, AttendanceStatus>();
 
-  todayFormatted = new Date().toLocaleDateString('en-IN', {
-    weekday: 'short', day: 'numeric', month: 'short',
-  });
+  get todayFormatted(): string {
+    const [year, month, day] = this.selectedDate.split('-').map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString('en-IN', {
+      weekday: 'short', day: 'numeric', month: 'short',
+    });
+  }
 
   constructor(
     private attendanceService: AttendanceService,
@@ -80,6 +85,11 @@ export class AttendanceComponent implements OnInit {
     });
   }
 
+  onDateChange(): void {
+    if (!this.selectedClassId) return;
+    this.onClassChange();
+  }
+
   onClassChange(): void {
     if (!this.selectedClassId) return;
     this.loading = true;
@@ -88,7 +98,7 @@ export class AttendanceComponent implements OnInit {
 
     forkJoin({
       students: this.dailyLogService.getStudentsByClass(this.selectedClassId),
-      records: this.attendanceService.getAttendanceByClass(this.selectedClassId, this.today),
+      records: this.attendanceService.getAttendanceByClass(this.selectedClassId, this.selectedDate),
     }).subscribe({
       next: ({ students, records }) => {
         this.students = students;
@@ -104,6 +114,8 @@ export class AttendanceComponent implements OnInit {
         // Detect completion: if every student already has a record, show summary
         this.isAlreadyMarked = students.length > 0 && records.length >= students.length;
         this.editMode = false;
+        // When viewing a past date with no records, default to entry mode
+        if (!this.isAlreadyMarked && this.selectedDate !== this.today) this.editMode = false;
         this.broadcastSent = this.isBroadcastSent();
 
         this.cdr.detectChanges();
@@ -143,7 +155,7 @@ export class AttendanceComponent implements OnInit {
     this.broadcasting = true;
     this.errorMessage = '';
 
-    this.attendanceService.broadcastArrival(this.selectedClassId, this.today).subscribe({
+    this.attendanceService.broadcastArrival(this.selectedClassId, this.selectedDate).subscribe({
       next: (result) => {
         this.broadcasting = false;
         this.broadcastSent = true;
@@ -226,7 +238,7 @@ export class AttendanceComponent implements OnInit {
     const records = Array.from(this.pendingStatuses.entries()).map(
       ([enrollmentId, status]) => ({
         enrollment_id: enrollmentId,
-        date: this.today,
+        date: this.selectedDate,
         status,
       }),
     );
@@ -263,7 +275,7 @@ export class AttendanceComponent implements OnInit {
   }
 
   private get broadcastKey(): string {
-    return `broadcast_${this.selectedClassId}_${this.today}`;
+    return `broadcast_${this.selectedClassId}_${this.selectedDate}`;
   }
 
   /** Students grouped by status for summary view */
@@ -288,8 +300,8 @@ export class AttendanceComponent implements OnInit {
     return this.isAlreadyMarked && !this.editMode;
   }
 
-  /** True when the selected date is today — only today allows teacher edits */
+  /** True when the selected date is today */
   get isToday(): boolean {
-    return this.today === todayLocal();
+    return this.selectedDate === todayLocal();
   }
 }

@@ -118,6 +118,8 @@ export class LoginComponent implements OnInit {
         this.loading = false;
         if (err?.name === 'TimeoutError') {
           this.errorMessage = 'Connection to school server is slow. Please check your data and try again.';
+        } else if (err?.status === 504 || err?.status === 502 || err?.status === 503) {
+          this.errorMessage = 'The school server is waking up — this can take a few seconds. Please wait a moment and try again.';
         } else {
           this.errorMessage = err?.error?.message || err?.message || 'Invalid credentials. Please try again.';
         }

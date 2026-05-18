@@ -73,7 +73,7 @@
   </div>
 
   <!-- Loading skeleton -->
-  <div *ngIf="loading" class="space-y-5">
+  <ng-container *ngIf="isLoading; else dataView"><div class="space-y-5">
     <div *ngFor="let i of [1,2,3]"
          class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-pulse">
       <div class="px-5 py-4 flex items-center gap-3">
@@ -94,10 +94,11 @@
         <div class="h-3 bg-gray-100 rounded w-16"></div>
       </div>
     </div>
-  </div>
+  </div></ng-container>
 
+  <ng-template #dataView>
   <!-- Empty state -->
-  <div *ngIf="!loading && activities.length === 0"
+  <div *ngIf="activities.length === 0"
        class="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
     <div class="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center mx-auto mb-5">
       <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,7 +120,7 @@
   </div>
 
   <!-- Activity cards -->
-  <div *ngIf="!loading && activities.length" class="space-y-5">
+  <div *ngIf="activities.length" class="space-y-5">
     <div *ngFor="let activity of activities"
          class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden
                 hover:shadow-md transition-shadow duration-200">
@@ -270,6 +271,7 @@
       </div>
     </div>
   </div>
+  </ng-template>
 </div>
 
 <!-- ─── LIGHTBOX OVERLAY ─── -->
