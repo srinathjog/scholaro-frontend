@@ -12,7 +12,7 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class TeacherFeedComponent implements OnInit {
   activities: Activity[] = [];
-  loading = true;
+  isLoading = true;
   errorMessage = '';
   deletingId: string | null = null;
   menuOpenId: string | null = null;
@@ -37,18 +37,18 @@ export class TeacherFeedComponent implements OnInit {
   }
 
   loadActivities(): void {
-    this.loading = true;
+    this.isLoading = true;
     this.errorMessage = '';
     this.activityService.getTeacherActivities(this.userId).subscribe({
       next: (data) => {
         this.activities = data;
-        this.loading = false;
+        this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('[TeacherFeed] API error:', err);
         this.errorMessage = 'Could not load your posts. Please try again.';
-        this.loading = false;
+        this.isLoading = false;
         this.cdr.detectChanges();
       },
     });

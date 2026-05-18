@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import {
   SchoolDocumentsService,
   SchoolDocument,
@@ -83,35 +84,57 @@ import {
 
         <div *ngIf="!loading && documents.length > 0" class="space-y-3">
           <div *ngFor="let doc of documents"
-               class="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-4
-                      flex items-center gap-4">
+               class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
-            <!-- Icon -->
-            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl"
-                 [class]="doc.file_type === 'pdf' ? 'bg-red-50' : 'bg-indigo-50'">
-              {{ doc.file_type === 'pdf' ? '📕' : '🖼️' }}
+            <!-- Row header -->
+            <div class="px-5 py-4 flex items-center gap-4">
+              <!-- Icon -->
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-xl"
+                   [class]="doc.file_type === 'pdf' ? 'bg-red-50' : 'bg-indigo-50'">
+                {{ doc.file_type === 'pdf' ? '📕' : '🖼️' }}
+              </div>
+
+              <!-- Info -->
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-gray-900 text-sm truncate">{{ doc.title }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">
+                  {{ doc.file_type.toUpperCase() }} · Uploaded {{ doc.created_at | date:'d MMM y' }}
+                </p>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-2 shrink-0">
+                <button (click)="togglePreview(doc.id)"
+                        class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-semibold
+                               hover:bg-indigo-100 transition-colors">
+                  {{ previewOpenId === doc.id ? 'Hide' : 'Preview' }}
+                </button>
+                <a [href]="doc.file_url" target="_blank" rel="noopener noreferrer" download
+                   class="px-3 py-1.5 rounded-lg bg-gray-50 text-gray-600 text-xs font-semibold
+                          hover:bg-gray-100 transition-colors">
+                  ⬇️
+                </a>
+                <button (click)="delete(doc)"
+                        class="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-semibold
+                               hover:bg-red-100 transition-colors">
+                  Delete
+                </button>
+              </div>
             </div>
 
-            <!-- Info -->
-            <div class="flex-1 min-w-0">
-              <p class="font-semibold text-gray-900 text-sm truncate">{{ doc.title }}</p>
-              <p class="text-xs text-gray-400 mt-0.5">
-                {{ doc.file_type.toUpperCase() }} · Uploaded {{ doc.created_at | date:'d MMM y' }}
-              </p>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex items-center gap-2 shrink-0">
-              <a [href]="doc.file_url" target="_blank" rel="noopener noreferrer"
-                 class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-semibold
-                        hover:bg-indigo-100 transition-colors">
-                View
-              </a>
-              <button (click)="delete(doc)"
-                      class="px-3 py-1.5 rounded-lg bg-red-50 text-red-500 text-xs font-semibold
-                             hover:bg-red-100 transition-colors">
-                Delete
-              </button>
+            <!-- Inline PDF / Image viewer -->
+            <div *ngIf="previewOpenId === doc.id">
+              <iframe *ngIf="doc.file_type === 'pdf'"
+                      [src]="getSafeUrl(doc.file_url)"
+                      title="{{ doc.title }}"
+                      class="w-full border-0 border-t border-gray-100"
+                      style="height: 70vh;">
+              </iframe>
+              <img *ngIf="doc.file_type === 'image'"
+                   [src]="doc.file_url"
+                   [alt]="doc.title"
+                   class="w-full object-contain border-t border-gray-100"
+                   style="max-height: 70vh;" />
             </div>
           </div>
         </div>
@@ -127,11 +150,22 @@ export class AdminDocumentsComponent implements OnInit {
   newTitle = '';
   selectedFile: File | null = null;
   uploadError = '';
+  previewOpenId: string | null = null;
 
   constructor(
     private readonly service: SchoolDocumentsService,
     private readonly cdr: ChangeDetectorRef,
+    private readonly sanitizer: DomSanitizer,
   ) {}
+
+  togglePreview(id: string): void {
+    this.previewOpenId = this.previewOpenId === id ? null : id;
+    this.cdr.detectChanges();
+  }
+
+  getSafeUrl(url: string): SafeResourceUrl {
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
 
   ngOnInit(): void {
     this.loadDocuments();
