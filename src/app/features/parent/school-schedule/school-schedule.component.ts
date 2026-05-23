@@ -47,7 +47,7 @@ export interface CalendarCell {
 export class SchoolScheduleComponent implements OnInit {
 
   // ── Tab state ──────────────────────────────────────────────────────────────
-  activeTab: 'events' | 'attendance' | 'syllabus' = 'events';
+  activeTab: 'events' | 'syllabus' = 'events';
 
   // ── Child selector ─────────────────────────────────────────────────────────
   children: ParentChild[] = [];
@@ -67,6 +67,13 @@ export class SchoolScheduleComponent implements OnInit {
   attendanceRecords: AttendanceRecord[] = [];
   loadingAttendance = false;
   attendanceError = '';
+
+  // ── School documents (annual events PDF) ──────────────────────────────────
+  yearlyEventsPdf: { id: string; title: string; file_url: string; file_type: string } | null = null;
+  yearlyEventsPdfUrl: SafeResourceUrl | null = null;
+
+  // ── All planners (history) ─────────────────────────────────────────────────
+  allPlanners: ClassPlanner[] = [];
 
   // ── Planner tab (now Syllabus) ─────────────────────────────────────────────
   currentPlanner: ClassPlanner | null = null;
@@ -91,6 +98,7 @@ export class SchoolScheduleComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadSchoolDocuments(); // Tenant-wide: no child needed
     this.parentService.getMyChildren().subscribe({
       next: (children) => {
         this.children = children;
@@ -112,7 +120,7 @@ export class SchoolScheduleComponent implements OnInit {
 
   // ── Tab switching ──────────────────────────────────────────────────────────
 
-  switchTab(tabName: 'events' | 'attendance' | 'syllabus'): void {
+  switchTab(tabName: 'events' | 'syllabus'): void {
     if (this.activeTab === tabName) return;
     this.activeTab = tabName;
 
@@ -120,14 +128,7 @@ export class SchoolScheduleComponent implements OnInit {
       this.loadEvents();
     }
 
-    if (tabName === 'attendance') {
-      const enrollmentId = this.activeEnrollmentId;
-      if (enrollmentId && this.attendanceRecords.length === 0 && !this.loadingAttendance) {
-        this.loadAttendance(enrollmentId);
-      }
-    }
-
-    if (tabName === 'syllabus' && !this.currentPlanner && !this.loadingPlanner && !this.plannerError) {
+    if (tabName === 'syllabus' && this.allPlanners.length === 0 && !this.loadingPlanner && !this.plannerError) {
       this.loadPlanner();
     }
 
@@ -143,6 +144,7 @@ export class SchoolScheduleComponent implements OnInit {
     this.attendanceError = '';
     // Reset planner so it is re-fetched for the new child's class
     this.currentPlanner = null;
+    this.allPlanners = [];
     this.plannerError = '';
 
     // Always eager-load attendance so calendar grid dots are populated
@@ -381,9 +383,10 @@ export class SchoolScheduleComponent implements OnInit {
 
     this.loadingPlanner = true;
     this.plannerError = '';
-    this.plannerService.getForClass(classId, this.plannerMonth, this.plannerYear).subscribe({
-      next: (planner) => {
-        this.currentPlanner = planner;
+    this.plannerService.getHistoryForClass(classId).subscribe({
+      next: (planners) => {
+        this.allPlanners = planners;
+        this.currentPlanner = planners[0] ?? null;
         this.loadingPlanner = false;
         this.cdr.markForCheck();
       },
@@ -393,5 +396,46 @@ export class SchoolScheduleComponent implements OnInit {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  /** Switch the syllabus viewer to a different historical planner. */
+  viewPlan(planner: ClassPlanner): void {
+    this.currentPlanner = planner;
+    this.cdr.markForCheck();
+  }
+
+  /** All planners after the current (newest) one — shown as archive list. */
+  get previousPlanners(): ClassPlanner[] {
+    return this.allPlanners.slice(1);
+  }
+
+  /** Full attendance record for the selected date (for rich detail card). */
+  get selectedDateAttendanceRecord(): AttendanceRecord | null {
+    if (!this.selectedCalendarDate) return null;
+    return this.attendanceRecords.find(r => r.date === this.selectedCalendarDate) ?? null;
+  }
+
+  /** Fetch school documents to find the annual events calendar PDF. */
+  private loadSchoolDocuments(): void {
+    this.http
+      .get<Array<{ id: string; title: string; file_url: string; file_type: string; created_at: string }>>(        `${environment.apiUrl}/school-documents`,
+      )
+      .subscribe({
+        next: (docs) => {
+          const pdf =
+            docs.find(d => d.file_type === 'pdf' && /calendar|annual|events/i.test(d.title)) ??
+            docs.find(d => d.file_type === 'pdf') ??
+            null;
+          if (pdf) {
+            this.yearlyEventsPdf = pdf;
+            this.yearlyEventsPdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(pdf.file_url);
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Silently ignore — annual PDF is optional
+          this.cdr.markForCheck();
+        },
+      });
   }
 }
