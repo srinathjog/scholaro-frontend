@@ -22,11 +22,11 @@ import { AuthService } from '../../../core/services/auth.service';
             </svg>
           </div>
           <h2 class="text-2xl font-extrabold text-gray-800 mb-1">Forgot Password</h2>
-          <p class="text-gray-500 text-sm text-center">Enter your school code and email. We'll send you a reset link.</p>
+          <p class="text-gray-500 text-sm text-center">{{ isSuperAdmin ? 'Enter your superadmin email' : 'Enter your school code and email' }}. We'll send you a reset link.</p>
         </div>
 
-        <!-- School Code -->
-        <div>
+        <!-- School Code (hidden for Super Admin) -->
+        <div *ngIf="!isSuperAdmin">
           <label class="block mb-1 font-medium text-gray-700" for="schoolCode">School Code</label>
           <input id="schoolCode" type="text" formControlName="schoolCode"
             class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition text-gray-800 bg-gray-50"
@@ -34,6 +34,12 @@ import { AuthService } from '../../../core/services/auth.service';
           <div *ngIf="schoolCode?.invalid && schoolCode?.touched" class="text-red-500 text-xs mt-1">
             School code is required.
           </div>
+        </div>
+
+        <!-- Super Admin Badge -->
+        <div *ngIf="isSuperAdmin"
+             class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-center text-sm font-medium">
+          🛡️ Platform Super Admin Password Reset
         </div>
 
         <!-- Email -->
@@ -63,9 +69,14 @@ import { AuthService } from '../../../core/services/auth.service';
         <!-- Error -->
         <div *ngIf="errorMessage" class="text-red-600 text-center text-sm">{{ errorMessage }}</div>
 
-        <!-- Back to login -->
-        <div class="text-center mt-2">
+        <!-- Back to login + Toggle Super Admin -->
+        <div class="flex justify-between items-center mt-2">
           <a routerLink="/login" class="text-blue-500 hover:underline text-sm font-medium">&larr; Back to Login</a>
+          <button type="button" (click)="toggleSuperAdmin()"
+            class="text-xs font-medium transition"
+            [ngClass]="isSuperAdmin ? 'text-slate-600 hover:text-slate-800' : 'text-gray-400 hover:text-gray-600'">
+            {{ isSuperAdmin ? '← School Admin' : '🛡️ Super Admin?' }}
+          </button>
         </div>
       </form>
     </div>
@@ -76,6 +87,7 @@ export class ForgotPasswordComponent {
   loading = false;
   successMessage = '';
   errorMessage = '';
+  isSuperAdmin = false;
 
   constructor(
     private fb: FormBuilder,
@@ -91,6 +103,16 @@ export class ForgotPasswordComponent {
   get email() { return this.form.get('email'); }
   get schoolCode() { return this.form.get('schoolCode'); }
 
+  toggleSuperAdmin() {
+    this.isSuperAdmin = !this.isSuperAdmin;
+    if (this.isSuperAdmin) {
+      this.form.get('schoolCode')?.clearValidators();
+    } else {
+      this.form.get('schoolCode')?.setValidators(Validators.required);
+    }
+    this.form.get('schoolCode')?.updateValueAndValidity();
+  }
+
   onSubmit() {
     this.successMessage = '';
     this.errorMessage = '';
@@ -101,15 +123,28 @@ export class ForgotPasswordComponent {
     this.loading = true;
     const { email, schoolCode } = this.form.value;
 
-    this.authService.requestPasswordReset(email, schoolCode).subscribe({
-      next: (res) => {
-        this.loading = false;
-        this.successMessage = res.message || 'If that email exists, a reset link has been sent.';
-      },
-      error: () => {
-        this.loading = false;
-        this.errorMessage = 'Something went wrong. Please try again.';
-      },
-    });
+    if (this.isSuperAdmin) {
+      this.authService.requestPasswordResetSuperAdmin(email).subscribe({
+        next: (res) => {
+          this.loading = false;
+          this.successMessage = res.message || 'If that email exists, a reset link has been sent.';
+        },
+        error: () => {
+          this.loading = false;
+          this.errorMessage = 'Something went wrong. Please try again.';
+        },
+      });
+    } else {
+      this.authService.requestPasswordReset(email, schoolCode).subscribe({
+        next: (res) => {
+          this.loading = false;
+          this.successMessage = res.message || 'If that email exists, a reset link has been sent.';
+        },
+        error: () => {
+          this.loading = false;
+          this.errorMessage = 'Something went wrong. Please try again.';
+        },
+      });
+    }
   }
 }
