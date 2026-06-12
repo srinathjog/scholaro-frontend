@@ -22,7 +22,7 @@ import { AuthService } from '../../../core/services/auth.service';
             </svg>
           </div>
           <h2 class="text-2xl font-extrabold text-gray-800 mb-1">Reset Password</h2>
-          <p class="text-gray-500 text-sm text-center">Choose a new password for your Scholaro account.</p>
+          <p class="text-gray-500 text-sm text-center">{{ isSuperAdmin ? 'Set your superadmin password' : 'Choose a new password for your Scholaro account.' }}</p>
         </div>
 
         <!-- Invalid token message -->
@@ -31,8 +31,8 @@ import { AuthService } from '../../../core/services/auth.service';
           <a routerLink="/forgot-password" class="text-blue-600 font-semibold hover:underline">request a new one</a>.
         </div>
 
-        <!-- School Code -->
-        <div>
+        <!-- School Code (hidden for Super Admin) -->
+        <div *ngIf="!isSuperAdmin">
           <label class="block mb-1 font-medium text-gray-700" for="schoolCode">School Code</label>
           <input id="schoolCode" type="text" formControlName="schoolCode"
             class="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition text-gray-800 bg-gray-50"
@@ -40,6 +40,12 @@ import { AuthService } from '../../../core/services/auth.service';
           <div *ngIf="schoolCode?.invalid && schoolCode?.touched" class="text-red-500 text-xs mt-1">
             School code is required.
           </div>
+        </div>
+
+        <!-- Super Admin Badge -->
+        <div *ngIf="isSuperAdmin"
+             class="bg-slate-800 text-white rounded-lg px-4 py-2.5 text-center text-sm font-medium">
+          🛡️ Platform Super Admin Password Reset
         </div>
 
         <!-- New Password -->
@@ -84,9 +90,14 @@ import { AuthService } from '../../../core/services/auth.service';
         <!-- Error -->
         <div *ngIf="errorMessage" class="text-red-600 text-center text-sm">{{ errorMessage }}</div>
 
-        <!-- Back -->
-        <div class="text-center mt-2">
+        <!-- Back + Toggle Super Admin -->
+        <div class="flex justify-between items-center mt-2">
           <a routerLink="/forgot-password" class="text-blue-500 hover:underline text-sm font-medium">&larr; Request a new link</a>
+          <button type="button" (click)="toggleSuperAdmin()"
+            class="text-xs font-medium transition"
+            [ngClass]="isSuperAdmin ? 'text-slate-600 hover:text-slate-800' : 'text-gray-400 hover:text-gray-600'">
+            {{ isSuperAdmin ? '← School Admin' : '🛡️ Super Admin?' }}
+          </button>
         </div>
       </form>
     </div>
@@ -98,6 +109,7 @@ export class ResetPasswordComponent implements OnInit {
   loading = false;
   successMessage = '';
   errorMessage = '';
+  isSuperAdmin = false;
 
   constructor(
     private fb: FormBuilder,
@@ -120,6 +132,16 @@ export class ResetPasswordComponent implements OnInit {
     this.token = this.route.snapshot.queryParamMap.get('token') || '';
   }
 
+  toggleSuperAdmin() {
+    this.isSuperAdmin = !this.isSuperAdmin;
+    if (this.isSuperAdmin) {
+      this.form.get('schoolCode')?.clearValidators();
+    } else {
+      this.form.get('schoolCode')?.setValidators(Validators.required);
+    }
+    this.form.get('schoolCode')?.updateValueAndValidity();
+  }
+
   private passwordMatchValidator(group: AbstractControl) {
     const pw = group.get('newPassword')?.value;
     const cpw = group.get('confirmPassword')?.value;
@@ -136,15 +158,28 @@ export class ResetPasswordComponent implements OnInit {
     this.loading = true;
     const { schoolCode, newPassword } = this.form.value;
 
-    this.authService.completePasswordReset(this.token, newPassword, schoolCode).subscribe({
-      next: (res) => {
-        this.loading = false;
-        this.successMessage = res.message || 'Password has been reset successfully.';
-      },
-      error: (err: any) => {
-        this.loading = false;
-        this.errorMessage = err.error?.message || 'Invalid or expired reset link. Please request a new one.';
-      },
-    });
+    if (this.isSuperAdmin) {
+      this.authService.completePasswordResetSuperAdmin(this.token, newPassword).subscribe({
+        next: (res) => {
+          this.loading = false;
+          this.successMessage = res.message || 'Password has been reset successfully.';
+        },
+        error: (err: any) => {
+          this.loading = false;
+          this.errorMessage = err.error?.message || 'Invalid or expired reset link. Please request a new one.';
+        },
+      });
+    } else {
+      this.authService.completePasswordReset(this.token, newPassword, schoolCode).subscribe({
+        next: (res) => {
+          this.loading = false;
+          this.successMessage = res.message || 'Password has been reset successfully.';
+        },
+        error: (err: any) => {
+          this.loading = false;
+          this.errorMessage = err.error?.message || 'Invalid or expired reset link. Please request a new one.';
+        },
+      });
+    }
   }
 }

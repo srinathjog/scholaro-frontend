@@ -182,4 +182,10 @@ export class AuthService {
       token, newPassword, school_code: schoolCode || undefined,
     });
   }
+
+  completePasswordResetSuperAdmin(token: string, newPassword: string): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${environment.apiUrl}/auth/reset-password/superadmin`, {
+      token, newPassword,
+    });
+  }
 }
